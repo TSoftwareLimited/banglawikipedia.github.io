@@ -256,7 +256,7 @@
             btnEl.classList.add('flex');
             
             btnEl.onclick = () => {
-                window.location.href = `article.html?id=${article.id}`;
+                window.location.href = `article.html?slug=${article.slug}`;
             };
             
             if (article.category) {
@@ -280,7 +280,7 @@
             articles.forEach(article => {
                 const imgUrl = article.image_url || 'https://images.unsplash.com/photo-1518349619113-03114f06ac3a?w=100';
                 const articleHTML = `
-                    <div onclick="window.location.href='article.html?id=${article.id}'" class="flex items-center gap-4 p-3 bg-zinc-50 dark:bg-zinc-800/30 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700 rounded-2xl transition-all cursor-pointer group">
+                    <div onclick="window.location.href='article.html?slug=${article.slug}'" class="flex items-center gap-4 p-3 bg-zinc-50 dark:bg-zinc-800/30 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700 rounded-2xl transition-all cursor-pointer group">
                         <div class="w-16 h-16 rounded-xl bg-zinc-200 dark:bg-zinc-800 overflow-hidden flex-shrink-0">
                             <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
                         </div>
