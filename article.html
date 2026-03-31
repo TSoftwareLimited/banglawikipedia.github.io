@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="bn" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>নিবন্ধ - উইকিপিডিয়া.বাংলা</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Hind Siliguri"', 'sans-serif'] },
+                    colors: { zinc: { 850: '#202022', 950: '#0c0c0e' } }
+                }
+            }
+        }
+    </script>
+    <style>
+        .glass { @apply bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-zinc-200 dark:border-white/5; }
+        .skeleton { @apply animate-pulse bg-zinc-200 dark:bg-zinc-800 rounded-xl; }
+    </style>
+</head>
+<body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-300 font-sans antialiased min-h-screen">
+
+    <nav class="sticky top-0 z-50 h-16 border-b glass flex items-center px-4 lg:px-6 justify-between">
+        <div onclick="window.location.href='index.html'" class="flex items-center gap-3 cursor-pointer">
+            <div class="w-9 h-9 bg-zinc-900 dark:bg-white rounded-xl flex items-center justify-center">
+                <span class="text-lg text-white dark:text-black font-bold">উ</span>
+            </div>
+            <span class="font-bold text-lg text-zinc-900 dark:text-white">উইকিপিডিয়া<span class="text-zinc-500">.বাংলা</span></span>
+        </div>
+        <button onclick="window.location.href='index.html'" class="px-4 py-2 text-sm font-medium bg-zinc-100 dark:bg-zinc-900 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">ফিরে যান</button>
+    </nav>
+
+    <main class="max-w-4xl mx-auto p-6 lg:p-12 pb-24">
+        <div id="loading" class="space-y-8">
+            <div class="h-64 sm:h-[400px] skeleton w-full"></div>
+            <div class="h-14 skeleton w-3/4"></div>
+            <div class="space-y-4">
+                <div class="h-4 skeleton w-full"></div>
+                <div class="h-4 skeleton w-full"></div>
+                <div class="h-4 skeleton w-5/6"></div>
+            </div>
+        </div>
+
+        <article id="content-area" class="hidden space-y-10">
+            <div class="relative rounded-[2.5rem] overflow-hidden shadow-2xl h-64 sm:h-[450px]">
+                <img id="article-image" src="" class="w-full h-full object-cover">
+                <div class="absolute inset-0 bg-gradient-to-t from-zinc-950/80 to-transparent"></div>
+            </div>
+
+            <div class="space-y-6">
+                <span id="article-category" class="px-4 py-1.5 bg-blue-600 text-white text-[10px] uppercase tracking-widest font-black rounded-full"></span>
+                <h1 id="article-title" class="text-4xl sm:text-6xl font-black text-zinc-900 dark:text-white leading-tight"></h1>
+                <div class="flex items-center gap-4 text-sm text-zinc-500 font-medium pb-8 border-b border-zinc-200 dark:border-zinc-800">
+                    <span id="article-date"></span>
+                    <span>•</span>
+                    <span>উইকিপিডিয়া সম্পাদক</span>
+                </div>
+            </div>
+
+            <div id="article-body" class="text-xl lg:text-2xl leading-[1.8] text-zinc-700 dark:text-zinc-300 font-light prose dark:prose-invert max-w-none">
+                <!-- Article content -->
+            </div>
+        </article>
+
+        <div id="error-area" class="hidden text-center py-20 space-y-6">
+            <h2 class="text-3xl font-bold">নিবন্ধটি খুঁজে পাওয়া যায়নি</h2>
+            <p class="text-zinc-500">সম্ভবত আইডি ভুল বা নিবন্ধটি মুছে ফেলা হয়েছে।</p>
+            <button onclick="window.location.href='index.html'" class="px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/20">মূল পাতায় ফিরে যান</button>
+        </div>
+    </main>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+        const supabaseUrl = 'https://ejawztjfekggwtlyymym.supabase.co';
+        const supabaseKey = 'sb_publishable_qzyHuTPdiitg0FZE6XCA5g_orpm2TsH';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const articleId = urlParams.get('id');
+
+        async function fetchArticle() {
+            if (!articleId) {
+                showError();
+                return;
+            }
+
+            try {
+                const { data: article, error } = await supabase
+                    .from('articles')
+                    .select('*')
+                    .eq('id', articleId)
+                    .single();
+
+                if (error || !article) throw error;
+                renderArticle(article);
+            } catch (err) {
+                console.error('Supabase error:', err);
+                showError();
+            }
+        }
+
+        function renderArticle(article) {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('content-area').classList.remove('hidden');
+
+            document.title = `${article.title} - উইকিপিডিয়া.বাংলা`;
+            document.getElementById('article-title').textContent = article.title;
+            document.getElementById('article-category').textContent = article.category || 'সাধারণ';
+            
+            const imgEl = document.getElementById('article-image');
+            imgEl.src = article.image_url || 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=1200';
+            
+            const date = new Date(article.created_at);
+            document.getElementById('article-date').textContent = date.toLocaleDateString('bn-BD', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+
+            const content = article.content || article.excerpt || 'এই নিবন্ধটির কোনো বিস্তারিত তথ্য নেই।';
+            const bodyContainer = document.getElementById('article-body');
+            
+            // Split by newline and wrap in p tags for clean Bengali typography
+            bodyContainer.innerHTML = content
+                .split('\n')
+                .filter(p => p.trim() !== '')
+                .map(p => `<p class="mb-8">${p}</p>`)
+                .join('');
+        }
+
+        function showError() {
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('error-area').classList.remove('hidden');
+        }
+
+        fetchArticle();
+    </script>
+</body>
+</html>
