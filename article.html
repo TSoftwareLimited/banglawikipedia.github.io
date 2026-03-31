@@ -83,10 +83,10 @@
         const supabase = createClient(supabaseUrl, supabaseKey);
 
         const urlParams = new URLSearchParams(window.location.search);
-        const articleId = urlParams.get('id');
+        const slug = urlParams.get('slug');
 
         async function fetchArticle() {
-            if (!articleId) {
+            if (!slug) {
                 showError();
                 return;
             }
@@ -95,7 +95,7 @@
                 const { data: article, error } = await supabase
                     .from('articles')
                     .select('*')
-                    .eq('id', articleId)
+                    .eq('slug', slug)
                     .single();
 
                 if (error || !article) throw error;
