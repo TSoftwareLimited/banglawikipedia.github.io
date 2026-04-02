@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="bn" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>নতুন নিবন্ধ তৈরি - উইকিপিডিয়া.বাংলা</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['"Hind Siliguri"', 'sans-serif'] } } } }
+    </script>
+    <style>
+        .glass { @apply bg-white/70 dark:bg-zinc-950/70 backdrop-blur-3xl border-zinc-200/50 dark:border-white/10; }
+    </style>
+</head>
+<body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-300 font-sans antialiased min-h-screen">
+
+    <nav class="sticky top-0 z-50 h-16 border-b glass flex items-center px-4 lg:px-6 justify-between transition-colors duration-300">
+        <div onclick="window.location.href='index.html'" class="flex items-center gap-3 cursor-pointer">
+            <div class="w-9 h-9 bg-zinc-900 dark:bg-white rounded-xl flex items-center justify-center transition-colors">
+                <span class="text-lg text-white dark:text-black font-bold">উ</span>
+            </div>
+            <span class="font-bold text-lg text-zinc-900 dark:text-white">উইকিপিডিয়া<span class="text-zinc-500">.বাংলা</span></span>
+        </div>
+        <button onclick="window.location.href='index.html'" class="px-4 py-2 text-sm font-medium bg-zinc-100 dark:bg-zinc-900 rounded-xl hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">ফিরে যান</button>
+    </nav>
+
+    <main class="max-w-3xl mx-auto p-6 lg:p-12">
+        <div class="space-y-2 mb-10">
+            <h1 class="text-4xl font-black text-zinc-900 dark:text-white">নতুন নিবন্ধ যোগ করুন</h1>
+            <p class="text-zinc-500">আপনার তথ্যগুলো নির্ভুলভাবে প্রদান করুন।</p>
+        </div>
+
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2.5rem] p-8 space-y-6 shadow-sm">
+            <div class="space-y-2">
+                <label class="text-xs font-bold uppercase tracking-wider text-zinc-400 px-1">নিবন্ধের শিরোনাম</label>
+                <input type="text" id="art-title" placeholder="যেমন: বাংলাদেশের ইতিহাস" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all">
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label class="text-xs font-bold uppercase tracking-wider text-zinc-400 px-1">বিভাগ</label>
+                    <input type="text" id="art-category" placeholder="যেমন: ইতিহাস" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold uppercase tracking-wider text-zinc-400 px-1">ছবি আপলোড করুন</label>
+                    <input type="file" id="art-image" accept="image/*" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-sm file:font-bold file:bg-blue-600 file:text-white hover:file:bg-blue-700 cursor-pointer">
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs font-bold uppercase tracking-wider text-zinc-400 px-1">সংক্ষিপ্ত বিবরণ (Excerpt)</label>
+                <input type="text" id="art-excerpt" placeholder="নিবন্ধটি সম্পর্কে এক লাইনে লিখুন" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all">
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-xs font-bold uppercase tracking-wider text-zinc-400 px-1">মূল নিবন্ধ (Content)</label>
+                <textarea id="art-content" rows="10" placeholder="বিস্তারিত এখানে লিখুন..." class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-5 py-4 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"></textarea>
+            </div>
+
+            <button id="submit-art" class="w-full py-5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-xl shadow-blue-500/20 active:scale-[0.98] transition-all text-lg">
+                নিবন্ধটি প্রকাশ করুন
+            </button>
+        </div>
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-8 left-1/2 -translate-x-1/2 flex flex-col gap-3 z-[300] w-full max-w-md px-4 pointer-events-none"></div>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+
+        const supabaseUrl = 'https://ejawztjfekggwtlyymym.supabase.co';
+        const supabaseKey = 'sb_publishable_qzyHuTPdiitg0FZE6XCA5g_orpm2TsH';
+        const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Toast Logic
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `flex items-center gap-3 px-6 py-4 rounded-2xl shadow-2xl transform transition-all duration-500 translate-y-10 opacity-0 glass border pointer-events-auto`;
+            
+            let icon = '';
+            let textColor = '';
+            if (type === 'success') {
+                icon = '<svg class="w-6 h-6 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+                textColor = 'text-emerald-600 dark:text-emerald-400';
+            } else if (type === 'error') {
+                icon = '<svg class="w-6 h-6 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>';
+                textColor = 'text-red-600 dark:text-red-400';
+            } else {
+                icon = '<svg class="w-6 h-6 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+                textColor = 'text-blue-600 dark:text-blue-400';
+            }
+
+            toast.innerHTML = `
+                <div class="flex-shrink-0">${icon}</div>
+                <p class="font-bold text-sm ${textColor}">${message}</p>
+            `;
+
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-y-10', 'opacity-0');
+            }, 10);
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-10', 'opacity-0');
+                setTimeout(() => toast.remove(), 500);
+            }, 4000);
+        }
+
+        // Auth Guard
+        const user = JSON.parse(localStorage.getItem('wiki_user'));
+        if (!user) {
+            showToast('নিবন্ধ তৈরি করতে আপনাকে অবশ্যই লগইন করতে হবে।', 'error');
+            window.location.href = 'index.html';
+        }
+
+        function slugify(text) {
+            return text.toString().toLowerCase().trim()
+                .replace(/\s+/g, '-') 
+                .replace(/[^\w\u0980-\u09FF-]+/g, '') // Keep Bengali & Alphanumeric
+                .replace(/--+/g, '-')
+                .replace(/^-+/, '')
+                .replace(/-+$/, '');
+        }
+
+        document.getElementById('submit-art').onclick = async () => {
+            const title = document.getElementById('art-title').value.trim();
+            const category = document.getElementById('art-category').value.trim();
+            const excerpt = document.getElementById('art-excerpt').value.trim();
+            const imageInput = document.getElementById('art-image');
+            const content = document.getElementById('art-content').value.trim();
+
+            if (!title || !excerpt || !content) {
+                showToast('দয়া করে শিরোনাম, সংক্ষিপ্ত বিবরণ এবং মূল নিবন্ধ লিখুন।', 'error');
+                return;
+            }
+
+            const slug = slugify(title);
+            const btn = document.getElementById('submit-art');
+            btn.disabled = true;
+            btn.textContent = 'প্রকাশ করা হচ্ছে...';
+
+            let image_url = null;
+
+            try {
+                // Image Upload Logic using ImgBB API
+                if (imageInput.files && imageInput.files[0]) {
+                    btn.textContent = 'ছবি আপলোড করা হচ্ছে...';
+                    const formData = new FormData();
+                    formData.append('key', 'a861b1b999d131e58bda7029ab6eee29');
+                    formData.append('image', imageInput.files[0]);
+
+                    const uploadResponse = await fetch('https://api.imgbb.com/1/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const uploadResult = await uploadResponse.json();
+                    if (uploadResult.success) {
+                        image_url = uploadResult.data.url;
+                    } else {
+                        throw new Error('ছবি আপলোড করতে সমস্যা হয়েছে।');
+                    }
+                }
+
+                btn.textContent = 'নিবন্ধ প্রকাশ করা হচ্ছে...';
+                const { data, error } = await supabase.from('articles').insert([{
+                    title,
+                    category: category || 'সাধারণ',
+                    excerpt,
+                    content,
+                    image_url,
+                    slug,
+                    user_id: user.id
+                }]).select().single();
+
+                if (error) {
+                    if (error.code === '23505') throw new Error('এই শিরোনামে ইতিমধ্যে একটি নিবন্ধ আছে।');
+                    throw error;
+                }
+
+                showToast('নিবন্ধটি সফলভাবে প্রকাশ করা হয়েছে!', 'success');
+                setTimeout(() => window.location.href = `article.html?slug=${data.slug}`, 1500);
+
+            } catch (err) {
+                showToast('ত্রুটি: ' + err.message, 'error');
+                btn.disabled = false;
+                btn.textContent = 'নিবন্ধটি প্রকাশ করুন';
+            }
+        };
+    </script>
+</body>
+</html>
