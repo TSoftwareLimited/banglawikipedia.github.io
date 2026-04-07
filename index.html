@@ -602,56 +602,7 @@
         };
 
         // Notifications UI Logic
-        const notifBtn = document.getElementById('notifBtn');
-        const notifDropdown = document.getElementById('notifDropdown');
-        if (notifBtn) {
-            notifBtn.onclick = (e) => {
-                e.stopPropagation();
-                notifDropdown.classList.toggle('opacity-0');
-                notifDropdown.classList.toggle('invisible');
-                notifDropdown.classList.toggle('translate-y-0');
-                notifDropdown.classList.toggle('translate-y-2');
-                notifDropdown.classList.toggle('scale-100');
-                notifDropdown.classList.toggle('scale-95');
-                if (!notifDropdown.classList.contains('invisible')) fetchNotifications();
-            };
-        }
-        document.addEventListener('click', () => {
-            if (notifDropdown) {
-                notifDropdown.classList.add('opacity-0', 'invisible', 'translate-y-2', 'scale-95');
-                notifDropdown.classList.remove('translate-y-0', 'scale-100');
-            }
-        });
-
-        async function fetchNotifications() {
-            const user = JSON.parse(localStorage.getItem('wiki_user'));
-            if (!user) return;
-            const { data, error } = await supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10);
-            if (error) return;
-            
-            const list = document.getElementById('notifList');
-            const badge = document.getElementById('notifBadge');
-            const unreadCount = data.filter(n => !n.is_read).length;
-            badge.classList.toggle('hidden', unreadCount === 0);
-
-            if (data.length === 0) {
-                list.innerHTML = '<p class="text-center py-8 text-zinc-500 text-xs">কোনো নোটিফিকেশন নেই</p>';
-                return;
-            }
-
-            list.innerHTML = data.map(n => {
-                let msg = n.type === 'story_like' ? `<b>${n.actor_name}</b> আপনার স্টোরি পছন্দ করেছেন` : `<b>${n.actor_name}</b> আপনার আলোচনায় উত্তর দিয়েছেন`;
-                let link = n.type === 'story_like' ? 'index.html' : `discuss.html?id=${n.target_id}`;
-                return `
-                    <a href="${link}" class="block px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-100 dark:border-zinc-800/50 ${n.is_read ? 'opacity-60' : ''}">
-                        <p class="text-xs text-zinc-700 dark:text-zinc-300 leading-tight">${msg}: "${n.target_title}"</p>
-                        <span class="text-[10px] text-zinc-500 mt-1 block">${new Date(n.created_at).toLocaleDateString('bn-BD')}</span>
-                    </a>
-                `;
-            }).join('');
-        }
-        setInterval(fetchNotifications, 30000); // Auto refresh every 30s
-        fetchNotifications();
+        // Logic moved to module script to access Supabase client
 
         // Mobile Menu Toggle
         const mobileMenuBtn = document.getElementById('mobileMenuBtn');
@@ -752,6 +703,7 @@
         const supabaseUrl = 'https://ejawztjfekggwtlyymym.supabase.co';
         const supabaseKey = 'sb_publishable_qzyHuTPdiitg0FZE6XCA5g_orpm2TsH';
         const supabase = createClient(supabaseUrl, supabaseKey);
+        const user = JSON.parse(localStorage.getItem('wiki_user'));
 
         // Global Theme Management
         const themeToggle = document.getElementById('themeToggle');
@@ -784,6 +736,52 @@
                 }
             }
         }
+
+        // Notification Logic inside Module
+        async function fetchNotifications() {
+            if (!user) return;
+            const { data, error } = await supabase.from('notifications').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(10);
+            if (error) return;
+            
+            const list = document.getElementById('notifList');
+            const badge = document.getElementById('notifBadge');
+            const unreadCount = data.filter(n => !n.is_read).length;
+            if (badge) badge.classList.toggle('hidden', unreadCount === 0);
+
+            if (data.length === 0) {
+                if (list) list.innerHTML = '<p class="text-center py-8 text-zinc-500 text-xs">কোনো নোটিফিকেশন নেই</p>';
+                return;
+            }
+
+            if (list) {
+                list.innerHTML = data.map(n => {
+                    let msg = n.type === 'story_like' ? `<b>${n.actor_name}</b> আপনার স্টোরি পছন্দ করেছেন` : `<b>${n.actor_name}</b> আপনার আলোচনায় উত্তর দিয়েছেন`;
+                    let link = n.type === 'story_like' ? 'index.html' : `discuss.html?id=${n.target_id}`;
+                    return `
+                        <a href="${link}" class="block px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors border-b border-zinc-100 dark:border-zinc-800/50 ${n.is_read ? 'opacity-60' : ''}">
+                            <p class="text-xs text-zinc-700 dark:text-zinc-300 leading-tight">${msg}: "${n.target_title}"</p>
+                            <span class="text-[10px] text-zinc-500 mt-1 block">${new Date(n.created_at).toLocaleDateString('bn-BD')}</span>
+                        </a>
+                    `;
+                }).join('');
+            }
+        }
+
+        const notifBtn = document.getElementById('notifBtn');
+        const notifDropdown = document.getElementById('notifDropdown');
+        if (notifBtn) {
+            notifBtn.onclick = (e) => {
+                e.stopPropagation();
+                notifDropdown.classList.toggle('opacity-0');
+                notifDropdown.classList.toggle('invisible');
+                if (!notifDropdown.classList.contains('invisible')) fetchNotifications();
+            };
+        }
+        document.addEventListener('click', () => {
+            if (notifDropdown) notifDropdown.classList.add('opacity-0', 'invisible');
+        });
+        setInterval(fetchNotifications, 30000);
+        fetchNotifications();
 
         if (themeToggle) {
             themeToggle.onclick = () => applyTheme(document.documentElement.classList.contains('dark') ? 'light' : 'dark');
@@ -836,7 +834,6 @@
         if (mobileCreateBtnBottom) mobileCreateBtnBottom.onclick = openMobileCreateMenu;
 
         function updateMobileMenuUI() {
-            const user = JSON.parse(localStorage.getItem('wiki_user'));
             if (user) {
                 document.getElementById('mobileMenuUserInfo').classList.remove('hidden');
                 document.getElementById('mobileMenuUserName').textContent = user.full_name;
@@ -938,35 +935,62 @@
             list.classList.remove('hidden');
 
             try {
-                const { data, error } = await supabase
+                const { data: discussions, error: discError } = await supabase
                     .from('discussions')
                     .select('*')
                     .order('created_at', { ascending: false });
 
-                if (error) throw error;
+                if (discError) throw discError;
 
-                if (data.length === 0) {
+                const { data: ads, error: adError } = await supabase
+                    .from('advertisements')
+                    .select('*')
+                    .eq('is_active', true)
+                    .eq('position', 'discussion')
+                    .in('device_type', ['all', window.innerWidth < 1024 ? 'mobile' : 'desktop']);
+
+                let combined = discussions.map(d => ({ ...d, itemType: 'discussion' }));
+                if (ads && ads.length > 0) {
+                    const userInterests = user?.interests || [];
+                    
+                    // ইন্টারেস্ট অনুযায়ী সর্টিং লজিক
+                    const prioritizedAds = [...ads].sort((a, b) => {
+                        const aMatch = a.tags?.some(tag => userInterests.includes(tag)) ? 1 : 0;
+                        const bMatch = b.tags?.some(tag => userInterests.includes(tag)) ? 1 : 0;
+                        if (aMatch !== bMatch) return bMatch - aMatch;
+                        return 0.5 - Math.random(); // ইন্টারেস্ট না থাকলে র‍্যান্ডম
+                    });
+
+                    prioritizedAds.forEach((ad, i) => {
+                        let insertIndex = (i + 1) * 3 - 1; // প্রতি ৩টি আলোচনার পর একটি বিজ্ঞাপন
+                        if (insertIndex > combined.length) insertIndex = combined.length;
+                        combined.splice(insertIndex, 0, { ...ad, itemType: 'ad' });
+                    });
+                }
+
+                if (combined.length === 0) {
                     list.innerHTML = '<p class="text-center py-20 text-zinc-500">এখনও কোনো আলোচনা শুরু হয়নি। প্রথম আলোচনাটি আপনি শুরু করুন!</p>';
                     return;
                 }
 
-                const items = await Promise.all(data.map(async d => {
-                    const stats = await getReactionStats(d.id);
-                    return `
+                const items = await Promise.all(combined.map(async item => {
+                    if (item.itemType === 'discussion') {
+                        const stats = await getReactionStats(item.id);
+                        return `
                     <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden mb-4 transition-all">
                         <div class="p-4 flex items-center gap-3">
-                            ${generateAvatarHtml(d.author)}
+                            ${generateAvatarHtml(item.author)}
                             <div>
-                                <p class="font-bold text-zinc-900 dark:text-white leading-tight hover:underline cursor-pointer">${d.author}</p>
-                                <p class="text-[10px] text-zinc-500 font-medium">${new Date(d.created_at).toLocaleDateString('bn-BD')} • <svg class="w-2.5 h-2.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg> ${d.views || 0}</p>
+                                <p class="font-bold text-zinc-900 dark:text-white leading-tight hover:underline cursor-pointer">${item.author}</p>
+                                <p class="text-[10px] text-zinc-500 font-medium">${new Date(item.created_at).toLocaleDateString('bn-BD')} • <svg class="w-2.5 h-2.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg> ${item.views || 0}</p>
                             </div>
                         </div>
-                        <div onclick="showDiscussion('${d.short_code || d.id}')" class="px-4 pb-3 cursor-pointer group">
-                            <h3 class="font-bold text-zinc-900 dark:text-white mb-2 line-clamp-1 group-hover:text-blue-600 transition-colors">${d.title}</h3>
-                            <p class="text-sm text-zinc-700 dark:text-zinc-300 line-clamp-3 leading-relaxed">${d.content}</p>
-                            ${d.image_urls && Array.isArray(d.image_urls) && d.image_urls.length > 0 ? (() => {
-                                const total = d.image_urls.length;
-                                const displayImages = d.image_urls.slice(0, 4);
+                        <div onclick="showDiscussion('${item.short_code || item.id}')" class="px-4 pb-3 cursor-pointer group">
+                            <h3 class="font-bold text-zinc-900 dark:text-white mb-2 line-clamp-1 group-hover:text-blue-600 transition-colors">${item.title}</h3>
+                            <p class="text-sm text-zinc-700 dark:text-zinc-300 line-clamp-3 leading-relaxed">${item.content}</p>
+                            ${item.image_urls && Array.isArray(item.image_urls) && item.image_urls.length > 0 ? (() => {
+                                const total = item.image_urls.length;
+                                const displayImages = item.image_urls.slice(0, 4);
                                 const gridCols = total === 1 ? 'grid-cols-1' : 'grid-cols-2';
                                 return `
                                 <div class="grid ${gridCols} gap-1 mt-3 rounded-2xl overflow-hidden border border-zinc-100 dark:border-zinc-800">
@@ -993,24 +1017,67 @@
                                 <div class="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center ring-1 ring-white dark:ring-zinc-900">
                                     <svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M4 21h1V8H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2zM20 8h-7l1.122-3.368A2 2 0 0 0 12.225 2H12L7 7.438V21h11l3.912-8.595L22 12v-2a2 2 0 0 0-2-2z"></path></svg>
                                 </div>
-                                <span id="react-count-${d.id}">${stats.count}</span>
+                                <span id="react-count-${item.id}">${stats.count}</span>
                             </div>
                         </div>
                         <div class="grid grid-cols-3 border-t border-zinc-100 dark:border-zinc-800">
-                            <button id="react-btn-${d.id}" onclick="toggleReaction('${d.id}')" class="flex items-center justify-center gap-2 py-3 text-sm font-bold ${stats.isLiked ? 'text-blue-600' : 'text-zinc-600 dark:text-zinc-400'} hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                            <button id="react-btn-${item.id}" onclick="toggleReaction('${item.id}')" class="flex items-center justify-center gap-2 py-3 text-sm font-bold ${stats.isLiked ? 'text-blue-600' : 'text-zinc-600 dark:text-zinc-400'} hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
                                 <svg class="w-5 h-5 transition-transform active:scale-125" fill="${stats.isLiked ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg> পছন্দ
                             </button>
-                            <button onclick="showDiscussion('${d.short_code || d.id}')" class="flex items-center justify-center gap-2 py-3 text-sm font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                            <button onclick="showDiscussion('${item.short_code || item.id}')" class="flex items-center justify-center gap-2 py-3 text-sm font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg> মন্তব্য
                             </button>
-                            <button onclick="shareDiscussion('${d.short_code || d.id}')" class="flex items-center justify-center gap-2 py-3 text-sm font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
+                            <button onclick="shareDiscussion('${item.short_code || item.id}')" class="flex items-center justify-center gap-2 py-3 text-sm font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors">
                                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.516 3.91M16 12a3 3 0 110-6 3 3 0 010 6zm0 0l-6.516-3.91"></path></svg> শেয়ার
                             </button>
                         </div>
                     </div>
                 `;
+                    } else {
+                        return `
+                    <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden mb-4 transition-all">
+                        <div class="p-4 flex items-center gap-3">
+                            ${item.author_profile_pic ? `<img src="${item.author_profile_pic}" class="w-10 h-10 rounded-full object-cover ring-2 ring-white dark:ring-zinc-800">` : generateAvatarHtml(item.author_name)}
+                            <div>
+                                <p class="font-bold text-zinc-900 dark:text-white leading-tight">${item.author_name}</p>
+                                <p class="text-[10px] text-zinc-500 font-medium">স্পনসরড • বিজ্ঞাপন</p>
+                            </div>
+                        </div>
+                        <div onclick="trackAdClick('${item.id}')" class="px-4 pb-3 cursor-pointer">
+                            <h3 class="font-bold text-zinc-900 dark:text-white mb-2 line-clamp-1">${item.title || 'বিজ্ঞাপন'}</h3>
+                            <p class="text-sm text-zinc-700 dark:text-zinc-300 mb-4">${item.content || ''}</p>
+                            <div id="ad-container-${item.id}" class="flex justify-center overflow-hidden rounded-xl bg-zinc-50 dark:bg-zinc-800/30 min-h-[90px] w-full items-center py-2"></div>
+                        </div>
+                        <div class="px-4 py-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-500">
+                            <div class="flex items-center gap-1">
+                                <div class="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center ring-1 ring-white dark:ring-zinc-900">
+                                    <svg class="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 24 24"><path d="M4 21h1V8H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2zM20 8h-7l1.122-3.368A2 2 0 0 0 12.225 2H12L7 7.438V21h11l3.912-8.595L22 12v-2a2 2 0 0 0-2-2z"></path></svg>
+                                </div>
+                                <span>${Math.floor(Math.random() * 800) + 200}</span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-3 border-t border-zinc-100 dark:border-zinc-800">
+                            <button class="flex items-center justify-center gap-2 py-3 text-sm font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg> পছন্দ</button>
+                            <button class="flex items-center justify-center gap-2 py-3 text-sm font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg> মন্তব্য</button>
+                            <button class="flex items-center justify-center gap-2 py-3 text-sm font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.516 3.91M16 12a3 3 0 110-6 3 3 0 010 6zm0 0l-6.516-3.91"></path></svg> শেয়ার</button>
+                        </div>
+                    </div>`;
+                    }
                 }));
                 list.innerHTML = items.join('');
+
+                // বিজ্ঞাপনের স্ক্রিপ্টগুলো রেন্ডার হওয়ার পর ইনজেক্ট করা
+                if (ads) {
+                    ads.forEach(ad => {
+                        const container = document.getElementById(`ad-container-${ad.id}`);
+                        if (container) {
+                            const range = document.createRange();
+                            range.selectNode(container);
+                            const fragment = range.createContextualFragment(ad.ad_script);
+                            container.appendChild(fragment);
+                        }
+                    });
+                }
             } catch (err) {
                 console.error("Discussion fetch error:", err);
                 list.innerHTML = '<p class="text-red-500 text-center py-10">আলোচনা লোড করতে সমস্যা হয়েছে।</p>';
@@ -1067,6 +1134,14 @@
             }
         }
         window.toggleReaction = toggleReaction;
+
+        window.trackAdClick = async (adId) => {
+            try {
+                await supabase.rpc('increment_ad_clicks', { ad_id: adId });
+            } catch (err) {
+                console.error("Ad click tracking failed:", err);
+            }
+        };
 
         window.showDiscussion = (code) => {
             window.location.href = `discuss.html?c=${code}`;
@@ -1250,11 +1325,39 @@
 
                 if (error) throw error;
 
+                const { data: ads } = await supabase
+                    .from('advertisements')
+                    .select('*')
+                    .eq('is_active', true)
+                    .eq('position', 'article')
+                    .in('device_type', ['all', window.innerWidth < 1024 ? 'mobile' : 'desktop']);
+
                 if (articles && articles.length > 0) {
                     renderFeaturedArticle(articles[0]);
                     
-                    if (articles.length > 1) {
-                        renderSidebarArticles(articles.slice(1));
+                    let sidebarItems = articles.slice(1).map(a => ({ ...a, itemType: 'article' }));
+                    
+                    if (ads && ads.length > 0) {
+                        const userInterests = user?.interests || [];
+
+                        // ইন্টারেস্ট অনুযায়ী সর্টিং লজিক
+                        const prioritizedAds = [...ads].sort((a, b) => {
+                            const aMatch = a.tags?.some(tag => userInterests.includes(tag)) ? 1 : 0;
+                            const bMatch = b.tags?.some(tag => userInterests.includes(tag)) ? 1 : 0;
+                            if (aMatch !== bMatch) return bMatch - aMatch;
+                            return 0.5 - Math.random();
+                        });
+
+                        prioritizedAds.forEach((ad, i) => {
+                            // প্রতি ৩টি নিবন্ধের পর একটি বিজ্ঞাপন যোগ করা হচ্ছে
+                            let insertIndex = (i + 1) * 3 - 1;
+                            if (insertIndex > sidebarItems.length) insertIndex = sidebarItems.length;
+                            sidebarItems.splice(insertIndex, 0, { ...ad, itemType: 'ad' });
+                        });
+                    }
+
+                    if (sidebarItems.length > 0) {
+                        renderSidebarArticles(sidebarItems, ads);
                     } else {
                         document.getElementById('sidebar-articles').innerHTML = '<p class="text-sm text-zinc-500 p-2">আরও কোনো নিবন্ধ নেই।</p>';
                     }
@@ -1578,25 +1681,58 @@
             }
         }
 
-        function renderSidebarArticles(articles) {
+        function renderSidebarArticles(items, ads) {
             const container = document.getElementById('sidebar-articles');
-            container.innerHTML = ''; // Clear skeletons
+            container.innerHTML = items.map(item => {
+                if (!item.itemType || item.itemType === 'article') {
+                    const imgUrl = item.image_url || 'https://images.unsplash.com/photo-1518349619113-03114f06ac3a?w=100';
+                    return `
+                        <div onclick="window.location.href='article.html?slug=${item.slug}'" class="flex items-center gap-3 p-2 bg-zinc-50 dark:bg-zinc-800/30 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700 rounded-xl transition-all cursor-pointer group">
+                            <div class="w-16 h-16 rounded-xl bg-zinc-200 dark:bg-zinc-800 overflow-hidden flex-shrink-0">
+                                <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-bold text-sm text-zinc-900 dark:text-zinc-100 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight">${item.title}</p>
+                                <p class="text-xs text-zinc-500 mt-1 font-medium">${item.category || 'সাধারণ'} • ${item.views || 0} ভিউ</p>
+                            </div>
+                        </div>
+                    `;
+                } else if (item.itemType === 'ad') {
+                    return `
+                        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm overflow-hidden mb-2 transition-all">
+                            <div class="p-3 flex items-center gap-2">
+                                ${item.author_profile_pic ? `<img src="${item.author_profile_pic}" class="w-8 h-8 rounded-full object-cover ring-2 ring-white dark:ring-zinc-800">` : generateAvatarHtml(item.author_name)}
+                                <div>
+                                    <p class="font-bold text-xs text-zinc-900 dark:text-white leading-tight">${item.author_name}</p>
+                                    <p class="text-[9px] text-zinc-500 font-medium">স্পনসরড</p>
+                                </div>
+                            </div>
+                            <div onclick="trackAdClick('${item.id}')" class="px-3 pb-2 cursor-pointer">
+                                <h4 class="font-bold text-xs text-zinc-900 dark:text-white mb-1 line-clamp-1">${item.title || ''}</h4>
+                                <div id="ad-sidebar-container-${item.id}" class="flex justify-center overflow-hidden rounded-lg bg-zinc-50 dark:bg-zinc-800/30 min-h-[50px] w-full items-center py-1"></div>
+                            </div>
+                            <div class="grid grid-cols-3 border-t border-zinc-100 dark:border-zinc-800">
+                                <button class="flex items-center justify-center gap-1 py-2 text-[10px] font-bold text-zinc-500 hover:text-blue-600 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg> পছন্দ</button>
+                                <button class="flex items-center justify-center gap-1 py-2 text-[10px] font-bold text-zinc-500 hover:text-blue-600 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg> মন্তব্য</button>
+                                <button class="flex items-center justify-center gap-1 py-2 text-[10px] font-bold text-zinc-500 hover:text-blue-600 transition-colors"><svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.516 3.91M16 12a3 3 0 110-6 3 3 0 010 6zm0 0l-6.516-3.91"></path></svg> শেয়ার</button>
+                            </div>
+                        </div>
+                    `;
+                }
+            }).join('');
 
-            articles.forEach(article => {
-                const imgUrl = article.image_url || 'https://images.unsplash.com/photo-1518349619113-03114f06ac3a?w=100';
-                const articleHTML = `
-                    <div onclick="window.location.href='article.html?slug=${article.slug}'" class="flex items-center gap-3 p-2 bg-zinc-50 dark:bg-zinc-800/30 hover:bg-zinc-100 dark:hover:bg-zinc-800 border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700 rounded-xl transition-all cursor-pointer group">
-                        <div class="w-16 h-16 rounded-xl bg-zinc-200 dark:bg-zinc-800 overflow-hidden flex-shrink-0">
-                            <img src="${imgUrl}" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
-                        </div>
-                        <div class="flex-1">
-                            <p class="font-bold text-sm text-zinc-900 dark:text-zinc-100 line-clamp-2 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors leading-tight">${article.title}</p>
-                            <p class="text-xs text-zinc-500 mt-1 font-medium">${article.category || 'সাধারণ'} • ${article.views || 0} ভিউ</p>
-                        </div>
-                    </div>
-                `;
-                container.insertAdjacentHTML('beforeend', articleHTML);
-            });
+            // বিজ্ঞাপনের স্ক্রিপ্টগুলো রেন্ডার হওয়ার পর ইনজেক্ট করা
+            if (ads) {
+                ads.forEach(ad => {
+                    const container = document.getElementById(`ad-sidebar-container-${ad.id}`);
+                    if (container) {
+                        const range = document.createRange();
+                        range.selectNode(container);
+                        const fragment = range.createContextualFragment(ad.ad_script);
+                        container.appendChild(fragment);
+                    }
+                });
+            }
         }
 
         function showEmptyState() {

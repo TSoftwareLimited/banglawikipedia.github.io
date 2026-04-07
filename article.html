@@ -19,6 +19,7 @@
             }
         }
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsdiff/5.1.0/diff.min.js"></script>
     <style>
         .glass { @apply bg-white/70 dark:bg-zinc-950/70 backdrop-blur-3xl border-zinc-200/50 dark:border-white/10; }
         @keyframes shimmer {
@@ -57,8 +58,8 @@
             </div>
             <div class="flex items-center gap-1 mb-2 sm:mb-0">
                 <button class="px-3 py-1.5 text-xs font-bold bg-zinc-100 dark:bg-zinc-900 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors">পড়ুন</button>
-                <button class="px-3 py-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors">সম্পাদনা</button>
-                <button class="px-3 py-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors">ইতিহাস</button>
+                <button id="edit-article-btn" class="px-3 py-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors">সম্পাদনা</button>
+                <button id="tab-history-btn" class="px-3 py-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors">ইতিহাস</button>
             </div>
         </div>
 
@@ -74,7 +75,7 @@
 
         <article id="content-area" class="hidden space-y-10">
             <div class="relative rounded-3xl overflow-hidden shadow-2xl h-64 sm:h-[450px]">
-                <img id="article-image" src="" class="w-full h-full object-cover">
+                <img id="article-image" src="" class="w-full h-full object-cover cursor-zoom-in" onclick="openLightbox(this.src)">
                 <div class="absolute inset-0 bg-gradient-to-t from-zinc-950/80 to-transparent"></div>
             </div>
 
@@ -100,16 +101,56 @@
             </div>
 
             <div class="bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800/60 rounded-3xl p-6 space-y-4 backdrop-blur-md">
-                <textarea id="comment-body" placeholder="আপনার মন্তব্য লিখুন..." rows="4" class="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"></textarea>
-                <div class="relative">
+                <div class="relative group">
                     <div id="mention-dropdown-main" class="absolute bottom-full left-0 w-full max-w-xs bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-2xl hidden z-50 mb-2 overflow-hidden border-b-0 animate-in slide-in-from-bottom-2 duration-200"></div>
-                    <textarea id="comment-body" oninput="handleMentionSearch(event, 'main')" placeholder="আপনার মন্তব্য লিখুন..." rows="4" class="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"></textarea>
+                    <textarea id="comment-body" oninput="handleMentionSearch(event, 'main')" placeholder="একটি মন্তব্য লিখুন (কাউকে মেনশন করতে @ ব্যবহার করুন)..." rows="4" class="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all text-zinc-900 dark:text-zinc-100"></textarea>
                 </div>
-                <button id="submit-comment" class="w-full sm:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all active:scale-95 shadow-lg shadow-blue-500/20">মন্তব্য জমা দিন</button>
+                
+                <div class="flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div class="flex items-center gap-3">
+                        <label for="comment-images" class="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-500 cursor-pointer transition-all flex items-center gap-2 text-xs font-bold" title="ছবি যোগ করুন">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                            ছবি যোগ করুন
+                        </label>
+                        <input type="file" id="comment-images" multiple accept="image/*" class="hidden">
+                        <span id="comment-image-count" class="text-[10px] font-bold text-blue-500 hidden"></span>
+                    </div>
+                    <button id="submit-comment" class="w-full sm:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all active:scale-95 shadow-lg shadow-blue-500/20">মন্তব্য জমা দিন</button>
+                </div>
+                <div id="comment-image-preview" class="grid grid-cols-3 sm:grid-cols-4 gap-3 mt-4 hidden"></div>
             </div>
 
             <div id="comments-list" class="space-y-6 pt-6"></div>
         </section>
+
+        <section id="history-area" class="hidden space-y-8 animate-in fade-in duration-500">
+            <div class="space-y-4">
+                <h2 class="text-3xl font-black text-zinc-900 dark:text-white">সম্পাদনার ইতিহাস</h2>
+                <p class="text-zinc-500">এই নিবন্ধে করা সকল পরিবর্তন এবং তাদের বর্তমান অবস্থা।</p>
+            </div>
+            <div id="history-list" class="space-y-4"></div>
+        </section>
+
+        <!-- Diff Modal -->
+        <div id="diff-modal" class="fixed inset-0 z-[450] hidden overflow-y-auto">
+            <div class="fixed inset-0 bg-black/80 backdrop-blur-md" onclick="closeDiffModal()"></div>
+            <div class="flex items-center justify-center min-h-screen p-4">
+                <div class="relative bg-white dark:bg-zinc-900 w-full max-w-4xl rounded-[2.5rem] shadow-2xl p-8 lg:p-10 transform transition-all animate-in zoom-in duration-300">
+                    <div class="space-y-6">
+                        <div class="flex justify-between items-center border-b border-zinc-100 dark:border-zinc-800 pb-4">
+                            <h2 id="diff-modal-title" class="text-2xl font-black text-zinc-900 dark:text-white truncate pr-8">পার্থক্য দেখুন</h2>
+                            <button onclick="closeEditModal(); closeDiffModal();" class="p-2 text-zinc-400 hover:text-zinc-900 dark:hover:text-white transition-colors">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                        <div class="p-6 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl border border-zinc-100 dark:border-zinc-800 max-h-[60vh] overflow-y-auto font-sans leading-relaxed text-lg" id="diff-viewer"></div>
+                        <div class="flex justify-center">
+                            <button onclick="closeDiffModal()" class="px-10 py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-black rounded-2xl hover:bg-zinc-200 transition-all uppercase tracking-widest text-xs">বন্ধ করুন</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div id="error-area" class="hidden text-center py-20 space-y-6">
             <h2 class="text-3xl font-bold">নিবন্ধটি খুঁজে পাওয়া যায়নি</h2>
@@ -117,6 +158,71 @@
             <button onclick="window.location.href='index.html'" class="px-8 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-500/20">মূল পাতায় ফিরে যান</button>
         </div>
     </main>
+
+    <!-- Image Lightbox Modal -->
+    <div id="lightbox-modal" class="fixed inset-0 z-[500] hidden flex items-center justify-center bg-black/95 backdrop-blur-xl animate-in fade-in duration-300 p-4">
+        <button onclick="closeLightbox()" class="absolute top-6 right-6 z-[510] p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all active:scale-90">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+        </button>
+        <div class="relative max-w-5xl max-h-[90vh]">
+            <img id="lightbox-image" src="" class="max-w-full max-h-full object-contain rounded-2xl shadow-2xl animate-in zoom-in-95 duration-300">
+        </div>
+    </div>
+
+    <!-- Edit Article Modal -->
+    <div id="edit-modal" class="fixed inset-0 z-[400] hidden overflow-y-auto">
+        <div class="fixed inset-0 bg-black/60 backdrop-blur-sm" onclick="closeEditModal()"></div>
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="relative bg-white dark:bg-zinc-900 w-full max-w-3xl rounded-[2.5rem] shadow-2xl p-8 lg:p-10 transform transition-all animate-in zoom-in duration-300">
+                <div class="space-y-6">
+                    <div class="text-center space-y-2">
+                        <h2 class="text-3xl font-black text-zinc-900 dark:text-white">নিবন্ধ সম্পাদনা</h2>
+                        <p class="text-zinc-500">আপনার পরিবর্তনগুলো রিভিউ করার পর প্রকাশ করা হবে।</p>
+                    </div>
+                    
+                    <div class="space-y-4 max-h-[60vh] overflow-y-auto pr-2 no-scrollbar">
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold uppercase tracking-wider text-zinc-400">শিরোনাম</label>
+                            <input type="text" id="edit-title" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                        </div>
+                        <div class="space-y-2">
+                            <label class="text-xs font-bold uppercase tracking-wider text-zinc-400">মূল বিষয়বস্তু</label>
+                            <textarea id="edit-content" rows="8" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-2xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/40 resize-none"></textarea>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div class="space-y-2">
+                                <label class="text-xs font-bold uppercase tracking-wider text-zinc-400">সম্পাদনার কারণ (Edit Summary) *</label>
+                                <input type="text" id="edit-summary" placeholder="যেমন: বানান সংশোধন করা হয়েছে" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-xs font-bold uppercase tracking-wider text-zinc-400">তথ্যসূত্র (লিঙ্ক)</label>
+                                <input type="url" id="edit-references" placeholder="https://..." class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex gap-3 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                        <button onclick="closeEditModal()" class="flex-1 py-4 bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-bold rounded-2xl hover:bg-zinc-200 transition-all">বাতিল</button>
+                        <button id="submit-edit-btn" class="flex-[2] py-4 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl shadow-lg shadow-blue-500/20 active:scale-95 transition-all">পেন্ডিং এডিট হিসেবে জমা দিন</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mention Preview Tooltip -->
+    <div id="mention-tooltip" class="fixed z-[100] hidden pointer-events-none transition-all duration-300 opacity-0 scale-95 origin-bottom translate-y-1">
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-4 w-64 glass">
+            <div class="flex items-center gap-3 mb-3">
+                <div id="tooltip-avatar" class="flex-shrink-0"></div>
+                <div class="min-w-0">
+                    <p id="tooltip-name" class="font-black text-sm text-zinc-900 dark:text-white truncate">লোড হচ্ছে...</p>
+                    <p id="tooltip-username" class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest"></p>
+                </div>
+            </div>
+            <p id="tooltip-bio" class="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 italic">ব্যবহারকারীর বিবরণ লোড হচ্ছে...</p>
+        </div>
+    </div>
 
     <!-- Toast Container -->
     <div id="toast-container" class="fixed bottom-8 left-1/2 -translate-x-1/2 flex flex-col gap-3 z-[300] w-full max-w-md px-4 pointer-events-none"></div>
@@ -172,15 +278,19 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const slug = urlParams.get('slug');
+        let currentArticle = null;
 
         // Tab Switching Logic
         const tabArticle = document.getElementById('tab-article');
         const tabTalk = document.getElementById('tab-talk');
+        const tabHistory = document.getElementById('tab-history-btn');
         const contentArea = document.getElementById('content-area');
         const talkArea = document.getElementById('talk-area');
+        const historyArea = document.getElementById('history-area');
 
         tabArticle.onclick = () => {
             tabArticle.className = 'px-4 py-2 text-sm font-bold border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 transition-all';
+            tabHistory.className = 'px-3 py-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors';
             tabTalk.className = 'px-4 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors';
             contentArea.classList.remove('hidden');
             talkArea.classList.add('hidden');
@@ -188,10 +298,22 @@
 
         tabTalk.onclick = () => {
             tabTalk.className = 'px-4 py-2 text-sm font-bold border-b-2 border-blue-500 text-blue-600 dark:text-blue-400 transition-all';
+            tabHistory.className = 'px-3 py-1.5 text-xs font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors';
             tabArticle.className = 'px-4 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors';
             contentArea.classList.add('hidden');
             talkArea.classList.remove('hidden');
+            historyArea.classList.add('hidden');
             fetchComments();
+        };
+
+        tabHistory.onclick = () => {
+            tabHistory.className = 'px-3 py-1.5 text-xs font-bold bg-blue-500/10 text-blue-600 rounded-lg transition-colors';
+            tabArticle.className = 'px-4 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors';
+            tabTalk.className = 'px-4 py-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors';
+            contentArea.classList.add('hidden');
+            talkArea.classList.add('hidden');
+            historyArea.classList.remove('hidden');
+            fetchHistory();
         };
 
         function generateAvatarHtml(authorName, profilePicUrl) {
@@ -208,7 +330,7 @@
         function formatContentWithMentions(content) {
             if (!content) return '';
             // @username খুঁজে বের করে সেটিকে প্রোফাইল লিঙ্কে রূপান্তর করে
-            return content.replace(/@(\w+)/g, '<a href="profile.html?username=$1" class="text-blue-600 font-bold hover:underline">@$1</a>');
+            return content.replace(/@(\w+)/g, '<a href="profile.html?username=$1" data-mention="$1" class="mention-pill inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-bold hover:bg-blue-600 hover:text-white transition-all border border-blue-500/10">@$1</a>');
         }
 
         // Talk Section Functions
@@ -226,13 +348,13 @@
 
                 if (error) throw error;
 
-                if (data.length === 0) {
+                if (!data || data.length === 0) {
                     list.innerHTML = '<div class="text-center py-10"><p class="text-zinc-500">এখনও কোনো আলোচনা শুরু হয়নি। প্রথম মন্তব্যটি আপনি করুন!</p></div>';
                     return;
                 }
 
                 list.innerHTML = data.map(c => `
-                    <div class="flex gap-4 p-5 bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 rounded-[1.5rem] shadow-sm transition-all hover:shadow-md">
+                    <div id="comment-${c.id}" class="flex gap-4 p-5 bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 rounded-[1.5rem] shadow-sm transition-all hover:shadow-md">
                         ${generateAvatarHtml(c.author, c.site_users?.profile_pic_url)}
                         <div class="flex-1 space-y-1">
                             <div class="flex justify-between items-center">
@@ -240,26 +362,51 @@
                                 <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-tighter">${new Date(c.created_at).toLocaleDateString('bn-BD')}</span>
                             </div>
                             <p class="text-sm sm:text-base text-zinc-700 dark:text-zinc-300 leading-relaxed">${formatContentWithMentions(c.content)}</p>
+
+                            <!-- Comment Images -->
+                            ${c.image_urls && c.image_urls.length > 0 ? `
+                                <div class="grid ${c.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-1 mt-3 rounded-2xl overflow-hidden border border-zinc-100 dark:border-zinc-800 max-w-sm">
+                                    ${c.image_urls.slice(0, 4).map((url, idx) => `
+                                        <div onclick="openLightbox('${url}')" class="relative ${c.image_urls.length === 1 ? 'h-48' : 'h-32'} bg-zinc-100 dark:bg-zinc-800 cursor-zoom-in group/img overflow-hidden">
+                                            <img src="${url}" class="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500">
+                                            ${idx === 3 && c.image_urls.length > 4 ? `
+                                                <div class="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                                    <span class="text-white text-xl font-black">+${c.image_urls.length - 3}</span>
+                                                </div>
+                                            ` : ''}
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            ` : ''}
+
                             <div class="flex gap-4 pt-2">
                                 <button class="text-[10px] font-black text-zinc-500 hover:text-blue-600 uppercase tracking-widest">লাইক</button>
                                 <button onclick="toggleReplyForm('${c.id}', '${c.site_users?.username || ''}')" class="text-[10px] font-black text-zinc-500 hover:text-blue-600 uppercase tracking-widest">উত্তর দিন</button>
                             </div>
 
                             <!-- Reply Form (Hidden by default) -->
-                            <div id="reply-form-${c.id}" class="hidden mt-4 space-y-3">
-                                <textarea id="reply-input-${c.id}" placeholder="আপনার উত্তর লিখুন..." rows="2" class="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"></textarea>
                             <div id="reply-form-${c.id}" class="hidden mt-4 space-y-3 relative">
                                 <div id="mention-dropdown-${c.id}" class="absolute bottom-full left-0 w-full max-w-xs bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-2xl hidden z-50 mb-2 overflow-hidden animate-in slide-in-from-bottom-2 duration-200"></div>
-                                <textarea id="reply-input-${c.id}" oninput="handleMentionSearch(event, '${c.id}')" placeholder="আপনার উত্তর লিখুন..." rows="2" class="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"></textarea>
-                                <div class="flex justify-end gap-2">
-                                    <button onclick="toggleReplyForm('${c.id}')" class="px-4 py-2 text-xs font-bold text-zinc-500">বাতিল</button>
-                                    <button id="reply-btn-${c.id}" onclick="submitCommentReply('${c.id}')" class="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg shadow-md active:scale-95 transition-all">উত্তর পাঠান</button>
+                                <textarea id="reply-input-${c.id}" oninput="handleMentionSearch(event, '${c.id}')" placeholder="আপনার উত্তর লিখুন..." rows="2" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all resize-none text-zinc-900 dark:text-zinc-100"></textarea>
+                                <div class="flex justify-between items-center">
+                                    <div class="flex items-center gap-2">
+                                        <label for="reply-images-${c.id}" class="p-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-500 cursor-pointer" title="ছবি যোগ করুন">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                        </label>
+                                        <input type="file" id="reply-images-${c.id}" multiple accept="image/*" class="hidden" onchange="handleReplyImageSelect('${c.id}')">
+                                        <span id="reply-image-count-${c.id}" class="text-[9px] font-bold text-blue-500 hidden"></span>
+                                    </div>
+                                    <div class="flex gap-2">
+                                        <button onclick="toggleReplyForm('${c.id}')" class="px-4 py-2 text-xs font-bold text-zinc-500">বাতিল</button>
+                                        <button id="reply-btn-${c.id}" onclick="submitCommentReply('${c.id}')" class="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg shadow-md active:scale-95 transition-all">উত্তর পাঠান</button>
+                                    </div>
                                 </div>
+                                <div id="reply-image-preview-${c.id}" class="grid grid-cols-3 gap-2 mt-2 hidden"></div>
                             </div>
 
                             <!-- Replies Thread -->
                             <div class="space-y-4 mt-4">
-                                ${c.comment_replies ? c.comment_replies.sort((a,b) => new Date(a.created_at) - new Date(b.created_at)).map(r => `
+                                ${c.comment_replies && c.comment_replies.length > 0 ? c.comment_replies.sort((a,b) => new Date(a.created_at) - new Date(b.created_at)).map(r => `
                                     <div class="flex gap-3 p-3 bg-zinc-50 dark:bg-zinc-800/30 rounded-2xl border border-zinc-100 dark:border-zinc-800 transition-all hover:bg-zinc-100/50">
                                         ${generateAvatarHtml(r.author, r.site_users?.profile_pic_url)}
                                         <div class="flex-1">
@@ -268,6 +415,23 @@
                                                 <span class="text-[9px] font-bold text-zinc-500 uppercase">${new Date(r.created_at).toLocaleDateString('bn-BD')}</span>
                                             </div>
                                             <p class="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">${formatContentWithMentions(r.content)}</p>
+
+                                            <!-- Reply Images -->
+                                            ${r.image_urls && r.image_urls.length > 0 ? `
+                                                <div class="grid ${r.image_urls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'} gap-1 mt-2 rounded-xl overflow-hidden border border-zinc-100 dark:border-zinc-800 max-w-xs">
+                                                    ${r.image_urls.slice(0, 4).map((url, idx) => `
+                                                        <div onclick="openLightbox('${url}')" class="relative ${r.image_urls.length === 1 ? 'h-32' : 'h-24'} bg-zinc-100 dark:bg-zinc-800 cursor-zoom-in group/img overflow-hidden">
+                                                            <img src="${url}" class="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500">
+                                                            ${idx === 3 && r.image_urls.length > 4 ? `
+                                                                <div class="absolute inset-0 bg-black/60 flex items-center justify-center">
+                                                                    <span class="text-white text-[10px] font-black">+${r.image_urls.length - 3}</span>
+                                                                </div>
+                                                            ` : ''}
+                                                        </div>
+                                                    `).join('')}
+                                                </div>
+                                            ` : ''}
+
                                             <button onclick="toggleReplyForm('${c.id}', '${r.site_users?.username || ''}')" class="text-[9px] font-black text-zinc-500 hover:text-blue-600 uppercase mt-1">উত্তর দিন</button>
                                         </div>
                                     </div>
@@ -277,6 +441,7 @@
                     </div>
                 `).join('');
             } catch (err) {
+                console.error('Comment fetch error:', err); // এরর কনসোলে প্রিন্ট হবে
                 list.innerHTML = '<p class="text-red-500">মন্তব্য লোড করতে সমস্যা হয়েছে।</p>';
             }
         }
@@ -294,16 +459,38 @@
                 return;
             }
 
-            const { error } = await supabase
-                .from('comments')
-                .insert([{ article_slug: slug, author: user.full_name, user_id: user.id, content }]);
+            const btn = document.getElementById('submit-comment');
+            const imageInput = document.getElementById('comment-images');
+            
+            btn.disabled = true;
+            btn.textContent = 'প্রসেসিং...';
 
-            if (error) {
-                showToast('মন্তব্য পোস্ট করা যায়নি।', 'error');
-            } else {
+            try {
+                let imageUrls = [];
+                if (imageInput.files.length > 0) {
+                    btn.textContent = 'ছবি আপলোড হচ্ছে...';
+                    imageUrls = await uploadMultipleImages(imageInput.files);
+                }
+
+                const { error } = await supabase
+                    .from('comments')
+                    .insert([{ article_slug: slug, author: user.full_name, user_id: user.id, content, image_urls: imageUrls }]);
+
+                if (error) throw error;
+
                 showToast('আপনার মন্তব্য যুক্ত করা হয়েছে!', 'success');
                 document.getElementById('comment-body').value = '';
+                imageInput.value = '';
+                document.getElementById('comment-image-preview').innerHTML = '';
+                document.getElementById('comment-image-preview').classList.add('hidden');
+                document.getElementById('comment-image-count').classList.add('hidden');
                 fetchComments();
+            } catch (error) {
+                console.error("Comment Insert Error:", error);
+                showToast('মন্তব্য পোস্ট করা যায়নি: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'মন্তব্য জমা দিন';
             }
         };
 
@@ -343,10 +530,11 @@
                 const query = match[1];
                 clearTimeout(mentionDebounce);
                 mentionDebounce = setTimeout(async () => {
+                    // Search in both username and full_name with fuzzy matching
                     const { data, error } = await supabase
                         .from('site_users')
                         .select('username, full_name, profile_pic_url')
-                        .ilike('username', `${query}%`)
+                        .or(`username.ilike.%${query}%,full_name.ilike.%${query}%`)
                         .limit(5);
 
                     if (data && data.length > 0) {
@@ -401,18 +589,27 @@
             btn.disabled = true;
             btn.textContent = 'পাঠানো হচ্ছে...';
 
-            const { error } = await supabase
-                .from('comment_replies')
-                .insert([{ comment_id: commentId, author: user.full_name, user_id: user.id, content }]);
+            try {
+                const imageInput = document.getElementById(`reply-images-${commentId}`);
+                let imageUrls = [];
+                if (imageInput.files.length > 0) {
+                    imageUrls = await uploadMultipleImages(imageInput.files);
+                }
 
-            btn.disabled = false;
-            btn.textContent = 'উত্তর পাঠান';
+                const { error } = await supabase
+                    .from('comment_replies')
+                    .insert([{ comment_id: commentId, author: user.full_name, user_id: user.id, content, image_urls: imageUrls }]);
 
-            if (error) {
-                showToast('উত্তর পাঠানো যায়নি।', 'error');
-            } else {
+                if (error) throw error;
+
                 showToast('আপনার উত্তর যুক্ত করা হয়েছে!', 'success');
                 fetchComments();
+            } catch (error) {
+                console.error("Reply Insert Error:", error);
+                showToast('উত্তর পাঠানো যায়নি: ' + error.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'উত্তর পাঠান';
             }
         };
 
@@ -431,6 +628,16 @@
 
                 if (error || !article) throw error;
 
+                currentArticle = article;
+                
+                // পজিশন 'article' এর জন্য বিজ্ঞাপনগুলো ফেচ করা
+                const { data: ads } = await supabase
+                    .from('advertisements')
+                    .select('*')
+                    .eq('is_active', true)
+                    .eq('position', 'article')
+                    .in('device_type', ['all', window.innerWidth < 1024 ? 'mobile' : 'desktop']);
+
                 // ভিউ ১ বাড়িয়ে দিন (সেশন ভিত্তিক চেক)
                 const articleKey = `viewed_article_${article.id}`;
                 if (!sessionStorage.getItem(articleKey)) {
@@ -440,14 +647,14 @@
                         article.views = (article.views || 0) + 1;
                     }
                 }
-                renderArticle(article);
+                renderArticle(article, ads);
             } catch (err) {
                 console.error('Supabase error:', err);
                 showError();
             }
         }
 
-        function renderArticle(article) {
+        function renderArticle(article, ads = []) {
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('content-area').classList.remove('hidden');
 
@@ -455,6 +662,11 @@
             document.getElementById('article-title').textContent = article.title;
             document.getElementById('article-category').textContent = article.category || 'সাধারণ';
             
+            // ইউজারের ইন্টারেস্ট আপডেট করা
+            if (user && article.category) {
+                supabase.rpc('add_user_interest', { u_id: user.id, new_interest: article.category });
+            }
+
             const imgEl = document.getElementById('article-image');
             imgEl.src = article.image_url || 'https://images.unsplash.com/photo-1503676260728-1c00da094a0b?q=80&w=1200';
             
@@ -468,17 +680,336 @@
             const content = article.content || article.excerpt || 'এই নিবন্ধটির কোনো বিস্তারিত তথ্য নেই।';
             const bodyContainer = document.getElementById('article-body');
             
-            // Split by newline and wrap in p tags for clean Bengali typography
-            bodyContainer.innerHTML = content
-                .split('\n')
-                .filter(p => p.trim() !== '')
-                .map(p => `<p class="mb-8">${p}</p>`)
-                .join('');
+            const maxAds = 3;
+            const shuffledAds = ads ? [...ads].sort(() => 0.5 - Math.random()) : [];
+            const rawContent = formatContentWithMentions(content);
+            
+            // [admoseek] প্লেসহোল্ডার অনুযায়ী কন্টেন্ট ভাগ করা
+            const contentParts = rawContent.split('[admoseek]');
+            let finalHtml = "";
+            
+            for (let i = 0; i < contentParts.length; i++) {
+                // কন্টেন্ট পার্টগুলো প্যারাগ্রাফে রূপান্তর
+                finalHtml += contentParts[i]
+                    .split('\n')
+                    .filter(p => p.trim() !== '')
+                    .map(p => `<p class="mb-8">${p}</p>`)
+                    .join('');
+
+                // প্লেসহোল্ডার পজিশনে বিজ্ঞাপন যোগ করা (সর্বোচ্চ ৩টি)
+                if (i < contentParts.length - 1 && i < maxAds && shuffledAds[i]) {
+                    const ad = shuffledAds[i];
+                    finalHtml += `
+                        <div class="my-10 p-5 sm:p-7 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-[2rem] shadow-sm overflow-hidden not-prose">
+                            <div class="flex items-center gap-3 mb-4">
+                                ${ad.author_profile_pic ? `<img src="${ad.author_profile_pic}" class="w-10 h-10 rounded-full object-cover ring-2 ring-white dark:ring-zinc-800">` : generateAvatarHtml(ad.author_name)}
+                                <div>
+                                    <p class="font-bold text-sm text-zinc-900 dark:text-white leading-tight">${ad.author_name}</p>
+                                    <p class="text-[10px] text-zinc-500 font-medium uppercase tracking-widest">স্পনসরড</p>
+                                </div>
+                            </div>
+                            <div onclick="trackAdClick('${ad.id}')" class="cursor-pointer space-y-3">
+                                <h4 class="font-bold text-lg text-zinc-900 dark:text-white leading-tight">${ad.title || ''}</h4>
+                                <div id="inline-ad-container-${ad.id}" class="flex justify-center overflow-hidden rounded-2xl bg-zinc-50 dark:bg-zinc-800/30 min-h-[90px] w-full items-center py-4"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            bodyContainer.innerHTML = finalHtml;
+
+            // বিজ্ঞাপনের স্ক্রিপ্ট ইনজেক্ট করা
+            if (ads) {
+                ads.forEach(ad => {
+                    const container = document.getElementById(`inline-ad-container-${ad.id}`);
+                    if (container) {
+                        const range = document.createRange();
+                        range.selectNode(container);
+                        const fragment = range.createContextualFragment(ad.ad_script);
+                        container.appendChild(fragment);
+                    }
+                });
+            }
         }
+
+        // Edit Logic
+        const editModal = document.getElementById('edit-modal');
+        document.getElementById('edit-article-btn').onclick = () => {
+            if (!user) {
+                showToast('সম্পাদনা করতে অনুগ্রহ করে আগে প্রবেশ করুন।', 'info');
+                return;
+            }
+            if (!currentArticle) return;
+
+            document.getElementById('edit-title').value = currentArticle.title;
+            document.getElementById('edit-content').value = currentArticle.content || currentArticle.excerpt;
+            editModal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        };
+
+        window.closeEditModal = () => {
+            editModal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        };
+
+        document.getElementById('submit-edit-btn').onclick = async () => {
+            const newTitle = document.getElementById('edit-title').value.trim();
+            const newContent = document.getElementById('edit-content').value.trim();
+            const summary = document.getElementById('edit-summary').value.trim();
+            const refs = document.getElementById('edit-references').value.trim();
+
+            if (!summary) {
+                showToast('সম্পাদনার কারণ লিখতে হবে।', 'error');
+                return;
+            }
+
+            const btn = document.getElementById('submit-edit-btn');
+            btn.disabled = true;
+            btn.textContent = 'জমা হচ্ছে...';
+
+            const { error } = await supabase.from('article_edits').insert([{
+                article_id: currentArticle.id,
+                user_id: user.id,
+                title: newTitle,
+                content: newContent,
+                edit_summary: summary,
+                references_link: refs,
+                status: 'pending'
+            }]);
+
+            btn.disabled = false;
+            btn.textContent = 'পেন্ডিং এডিট হিসেবে জমা দিন';
+
+            if (error) {
+                showToast('সম্পাদনা জমা দেওয়া যায়নি: ' + error.message, 'error');
+            } else {
+                showToast('আপনার সম্পাদনা রিভিউ করার জন্য জমা দেওয়া হয়েছে!', 'success');
+                closeEditModal();
+            }
+        };
+
+        async function fetchHistory() {
+            const list = document.getElementById('history-list');
+            list.innerHTML = '<div class="skeleton h-24 w-full"></div>';
+
+            try {
+                const { data, error } = await supabase
+                    .from('article_edits')
+                    .select('*, site_users(full_name, profile_pic_url)')
+                    .eq('article_id', currentArticle.id)
+                    .order('created_at', { ascending: false });
+
+                if (error) throw error;
+
+                if (!data || data.length === 0) {
+                    list.innerHTML = '<p class="text-center py-10 text-zinc-500">এই নিবন্ধটির কোনো সম্পাদনার ইতিহাস পাওয়া যায়নি।</p>';
+                    return;
+                }
+
+                list.innerHTML = data.map(edit => `
+                    <div class="flex gap-4 p-5 bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 rounded-3xl">
+                        ${generateAvatarHtml(edit.site_users?.full_name, edit.site_users?.profile_pic_url)}
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <p class="font-black text-zinc-900 dark:text-white">${edit.site_users?.full_name || 'অজানা ব্যবহারকারী'}</p>
+                                    <p class="text-[10px] font-bold text-zinc-500 uppercase">${new Date(edit.created_at).toLocaleString('bn-BD')}</p>
+                                </div>
+                                <div class="flex flex-col items-end gap-2">
+                                    <span class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                                        edit.status === 'approved' ? 'bg-emerald-500/10 text-emerald-500' : 
+                                        edit.status === 'rejected' ? 'bg-red-500/10 text-red-500' : 'bg-amber-500/10 text-amber-500'
+                                    }">${edit.status === 'approved' ? 'গৃহীত' : edit.status === 'rejected' ? 'বাতিল' : 'পেন্ডিং'}</span>
+                                    <button onclick="openDiffModal('${edit.id}')" class="text-[10px] font-bold text-blue-600 hover:underline">পার্থক্য দেখুন</button>
+                                </div>
+                            </div>
+                            <p class="text-sm text-zinc-600 dark:text-zinc-400 italic">"${edit.edit_summary}"</p>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                list.innerHTML = '<p class="text-red-500">ইতিহাস লোড করতে সমস্যা হয়েছে।</p>';
+            }
+        }
+
+        window.openDiffModal = async (editId) => {
+            const { data: edit } = await supabase.from('article_edits').select('*').eq('id', editId).single();
+            if (!edit || !currentArticle) return;
+
+            const diffContainer = document.getElementById('diff-viewer');
+            // Compare current content with proposed edit content
+            const diff = Diff.diffWords(currentArticle.content || currentArticle.excerpt || '', edit.content || '');
+            
+            diffContainer.innerHTML = diff.map(part => {
+                const color = part.added ? 'bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/30' : 
+                              part.removed ? 'bg-rose-500/20 text-rose-700 dark:text-rose-400 border-rose-500/30 line-through decoration-rose-500/50' : '';
+                
+                return color 
+                    ? `<span class="px-1 rounded border ${color}">${part.value}</span>` 
+                    : `<span>${part.value}</span>`;
+            }).join('');
+
+            document.getElementById('diff-modal-title').textContent = `পার্থক্য: ${edit.title || currentArticle.title}`;
+            document.getElementById('diff-modal').classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        };
+
+        window.closeDiffModal = () => {
+            document.getElementById('diff-modal').classList.add('hidden');
+            if (!document.getElementById('edit-modal').classList.contains('hidden')) return;
+            document.body.classList.remove('overflow-hidden');
+        };
 
         function showError() {
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('error-area').classList.remove('hidden');
+        }
+
+        // Image Helper Functions
+        async function uploadMultipleImages(files) {
+            const promises = Array.from(files).map(file => {
+                return new Promise((resolve, reject) => {
+                    const formData = new FormData();
+                    formData.append('key', 'a861b1b999d131e58bda7029ab6eee29');
+                    formData.append('image', file);
+                    fetch('https://api.imgbb.com/1/upload', { method: 'POST', body: formData })
+                        .then(res => res.json())
+                        .then(json => json.success ? resolve(json.data.url) : reject(new Error('Upload failed')))
+                        .catch(reject);
+                });
+            });
+            return Promise.all(promises);
+        }
+
+        // Main Comment Image Select
+        document.getElementById('comment-images').onchange = (e) => {
+            const badge = document.getElementById('comment-image-count');
+            const preview = document.getElementById('comment-image-preview');
+            const files = Array.from(e.target.files);
+            
+            if (files.length > 0) {
+                badge.textContent = files.length + 'টি ছবি';
+                badge.classList.remove('hidden');
+                preview.innerHTML = '';
+                preview.classList.remove('hidden');
+                files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        preview.innerHTML += `<div class="aspect-square rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                            <img src="${ev.target.result}" class="w-full h-full object-cover">
+                        </div>`;
+                    };
+                    reader.readAsDataURL(file);
+                });
+            } else {
+                badge.classList.add('hidden');
+                preview.classList.add('hidden');
+            }
+        };
+
+        // Reply Image Select
+        window.handleReplyImageSelect = (id) => {
+            const input = document.getElementById(`reply-images-${id}`);
+            const badge = document.getElementById(`reply-image-count-${id}`);
+            const preview = document.getElementById(`reply-image-preview-${id}`);
+            const files = Array.from(input.files);
+
+            if (files.length > 0) {
+                badge.textContent = files.length + 'টি ছবি';
+                badge.classList.remove('hidden');
+                preview.innerHTML = '';
+                preview.classList.remove('hidden');
+                files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        preview.innerHTML += `<div class="aspect-square rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                            <img src="${ev.target.result}" class="w-full h-full object-cover">
+                        </div>`;
+                    };
+                    reader.readAsDataURL(file);
+                });
+            } else {
+                badge.classList.add('hidden');
+                preview.classList.add('hidden');
+            }
+        };
+
+        // Lightbox Functions
+        window.openLightbox = (url) => {
+            const modal = document.getElementById('lightbox-modal');
+            const img = document.getElementById('lightbox-image');
+            img.src = url;
+            modal.classList.remove('hidden');
+            document.body.classList.add('overflow-hidden');
+        };
+
+        window.closeLightbox = () => {
+            const modal = document.getElementById('lightbox-modal');
+            modal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        };
+
+        window.trackAdClick = async (adId) => {
+            try {
+                await supabase.rpc('increment_ad_clicks', { ad_id: adId });
+            } catch (err) {
+                console.error("Ad click tracking failed:", err);
+            }
+        };
+
+        document.getElementById('lightbox-modal').onclick = (e) => {
+            if (e.target.id === 'lightbox-modal') closeLightbox();
+        };
+
+        // Tooltip Logic
+        const tooltip = document.getElementById('mention-tooltip');
+        const mentionCache = new Map();
+        let tooltipTimeout;
+
+        document.addEventListener('mouseover', async (e) => {
+            const pill = e.target.closest('[data-mention]');
+            if (!pill) return;
+
+            const username = pill.getAttribute('data-mention');
+            const rect = pill.getBoundingClientRect();
+            
+            // Position tooltip
+            tooltip.style.left = `${rect.left + rect.width / 2}px`;
+            tooltip.style.top = `${rect.top - 12}px`;
+            tooltip.style.transform = `translate(-50%, -100%)`;
+            
+            tooltip.classList.remove('hidden');
+            setTimeout(() => tooltip.classList.remove('opacity-0', 'scale-95', 'translate-y-1'), 10);
+
+            if (mentionCache.has(username)) {
+                updateTooltipUI(mentionCache.get(username));
+            } else {
+                const { data } = await supabase.from('site_users').select('full_name, username, bio, profile_pic_url').eq('username', username).single();
+                if (data) {
+                    mentionCache.set(username, data);
+                    updateTooltipUI(data);
+                }
+            }
+        });
+
+        document.addEventListener('mouseout', (e) => {
+            if (e.target.closest('[data-mention]')) {
+                tooltip.classList.add('opacity-0', 'scale-95', 'translate-y-1');
+                tooltipTimeout = setTimeout(() => tooltip.classList.add('hidden'), 300);
+            }
+        });
+
+        function updateTooltipUI(user) {
+            document.getElementById('tooltip-name').textContent = user.full_name;
+            document.getElementById('tooltip-username').textContent = `@${user.username}`;
+            document.getElementById('tooltip-bio').textContent = user.bio || 'এই ব্যবহারকারী এখনো কোনো বায়ো যোগ করেননি।';
+            
+            const avatar = document.getElementById('tooltip-avatar');
+            if (user.profile_pic_url) {
+                avatar.innerHTML = `<img src="${user.profile_pic_url}" class="w-10 h-10 rounded-xl object-cover shadow-sm ring-1 ring-zinc-200 dark:ring-zinc-800">`;
+            } else {
+                avatar.innerHTML = generateAvatarHtml(user.full_name);
+            }
         }
 
         fetchArticle();
