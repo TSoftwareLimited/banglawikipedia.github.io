@@ -100,8 +100,11 @@
             </div>
 
             <div class="bg-white dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800/60 rounded-3xl p-6 space-y-4 backdrop-blur-md">
-                <input type="text" id="comment-author" placeholder="আপনার নাম" class="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all">
                 <textarea id="comment-body" placeholder="আপনার মন্তব্য লিখুন..." rows="4" class="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"></textarea>
+                <div class="relative">
+                    <div id="mention-dropdown-main" class="absolute bottom-full left-0 w-full max-w-xs bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-2xl hidden z-50 mb-2 overflow-hidden border-b-0 animate-in slide-in-from-bottom-2 duration-200"></div>
+                    <textarea id="comment-body" oninput="handleMentionSearch(event, 'main')" placeholder="আপনার মন্তব্য লিখুন..." rows="4" class="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"></textarea>
+                </div>
                 <button id="submit-comment" class="w-full sm:w-auto px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-all active:scale-95 shadow-lg shadow-blue-500/20">মন্তব্য জমা দিন</button>
             </div>
 
@@ -124,6 +127,12 @@
         const supabaseUrl = 'https://ejawztjfekggwtlyymym.supabase.co';
         const supabaseKey = 'sb_publishable_qzyHuTPdiitg0FZE6XCA5g_orpm2TsH';
         const supabase = createClient(supabaseUrl, supabaseKey);
+
+        // Init Theme from storage/user
+        const user = JSON.parse(localStorage.getItem('wiki_user'));
+        const savedTheme = user?.theme_preference || localStorage.getItem('theme') || 'dark';
+        if (savedTheme === 'dark') document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
 
         // Toast Logic
         function showToast(message, type = 'info') {
@@ -185,32 +194,86 @@
             fetchComments();
         };
 
+        function generateAvatarHtml(authorName, profilePicUrl) {
+            if (profilePicUrl) {
+                return `<img src="${profilePicUrl}" class="w-10 h-10 rounded-full object-cover shadow-inner flex-shrink-0 ring-2 ring-white dark:ring-zinc-800">`;
+            }
+            const initial = (authorName || '').charAt(0).toUpperCase() || 'U';
+            const colors = ['bg-red-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-indigo-500', 'bg-rose-500'];
+            const hash = (authorName || '').split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const color = colors[hash % colors.length];
+            return `<div class="w-10 h-10 rounded-full ${color} flex items-center justify-center text-white text-lg font-bold shadow-inner flex-shrink-0 ring-2 ring-white dark:ring-zinc-800">${initial}</div>`;
+        }
+
+        function formatContentWithMentions(content) {
+            if (!content) return '';
+            // @username খুঁজে বের করে সেটিকে প্রোফাইল লিঙ্কে রূপান্তর করে
+            return content.replace(/@(\w+)/g, '<a href="profile.html?username=$1" class="text-blue-600 font-bold hover:underline">@$1</a>');
+        }
+
         // Talk Section Functions
         async function fetchComments() {
             const list = document.getElementById('comments-list');
-            list.innerHTML = '<div class="skeleton h-24 w-full"></div>';
+            list.innerHTML = '<div class="skeleton h-20 w-full mb-4"></div><div class="skeleton h-20 w-full"></div>';
             
             try {
+                // Fetch comments with user profile data
                 const { data, error } = await supabase
                     .from('comments')
-                    .select('*')
+                    .select('*, site_users(profile_pic_url, username), comment_replies(*, site_users(profile_pic_url, username))')
                     .eq('article_slug', slug)
                     .order('created_at', { ascending: false });
 
                 if (error) throw error;
 
                 if (data.length === 0) {
-                    list.innerHTML = '<p class="text-center py-10 text-zinc-500">এখনও কোনো আলোচনা শুরু হয়নি। প্রথম মন্তব্যটি আপনি করুন!</p>';
+                    list.innerHTML = '<div class="text-center py-10"><p class="text-zinc-500">এখনও কোনো আলোচনা শুরু হয়নি। প্রথম মন্তব্যটি আপনি করুন!</p></div>';
                     return;
                 }
 
                 list.innerHTML = data.map(c => `
-                    <div class="p-4 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-sm">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="font-bold text-blue-600 dark:text-blue-400">${c.author}</span>
-                            <span class="text-xs text-zinc-500">${new Date(c.created_at).toLocaleDateString('bn-BD')}</span>
+                    <div class="flex gap-4 p-5 bg-white dark:bg-zinc-900/40 border border-zinc-200 dark:border-zinc-800 rounded-[1.5rem] shadow-sm transition-all hover:shadow-md">
+                        ${generateAvatarHtml(c.author, c.site_users?.profile_pic_url)}
+                        <div class="flex-1 space-y-1">
+                            <div class="flex justify-between items-center">
+                                <span class="font-black text-sm text-zinc-900 dark:text-white hover:text-blue-600 cursor-pointer transition-colors">${c.author}</span>
+                                <span class="text-[10px] font-bold text-zinc-500 uppercase tracking-tighter">${new Date(c.created_at).toLocaleDateString('bn-BD')}</span>
+                            </div>
+                            <p class="text-sm sm:text-base text-zinc-700 dark:text-zinc-300 leading-relaxed">${formatContentWithMentions(c.content)}</p>
+                            <div class="flex gap-4 pt-2">
+                                <button class="text-[10px] font-black text-zinc-500 hover:text-blue-600 uppercase tracking-widest">লাইক</button>
+                                <button onclick="toggleReplyForm('${c.id}', '${c.site_users?.username || ''}')" class="text-[10px] font-black text-zinc-500 hover:text-blue-600 uppercase tracking-widest">উত্তর দিন</button>
+                            </div>
+
+                            <!-- Reply Form (Hidden by default) -->
+                            <div id="reply-form-${c.id}" class="hidden mt-4 space-y-3">
+                                <textarea id="reply-input-${c.id}" placeholder="আপনার উত্তর লিখুন..." rows="2" class="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"></textarea>
+                            <div id="reply-form-${c.id}" class="hidden mt-4 space-y-3 relative">
+                                <div id="mention-dropdown-${c.id}" class="absolute bottom-full left-0 w-full max-w-xs bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-2xl shadow-2xl hidden z-50 mb-2 overflow-hidden animate-in slide-in-from-bottom-2 duration-200"></div>
+                                <textarea id="reply-input-${c.id}" oninput="handleMentionSearch(event, '${c.id}')" placeholder="আপনার উত্তর লিখুন..." rows="2" class="w-full bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all"></textarea>
+                                <div class="flex justify-end gap-2">
+                                    <button onclick="toggleReplyForm('${c.id}')" class="px-4 py-2 text-xs font-bold text-zinc-500">বাতিল</button>
+                                    <button id="reply-btn-${c.id}" onclick="submitCommentReply('${c.id}')" class="px-4 py-2 bg-blue-600 text-white text-xs font-bold rounded-lg shadow-md active:scale-95 transition-all">উত্তর পাঠান</button>
+                                </div>
+                            </div>
+
+                            <!-- Replies Thread -->
+                            <div class="space-y-4 mt-4">
+                                ${c.comment_replies ? c.comment_replies.sort((a,b) => new Date(a.created_at) - new Date(b.created_at)).map(r => `
+                                    <div class="flex gap-3 p-3 bg-zinc-50 dark:bg-zinc-800/30 rounded-2xl border border-zinc-100 dark:border-zinc-800 transition-all hover:bg-zinc-100/50">
+                                        ${generateAvatarHtml(r.author, r.site_users?.profile_pic_url)}
+                                        <div class="flex-1">
+                                            <div class="flex justify-between items-center mb-1">
+                                                <span class="font-black text-xs text-zinc-900 dark:text-white">${r.author}</span>
+                                                <span class="text-[9px] font-bold text-zinc-500 uppercase">${new Date(r.created_at).toLocaleDateString('bn-BD')}</span>
+                                            </div>
+                                            <p class="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">${formatContentWithMentions(r.content)}</p>
+                                            <button onclick="toggleReplyForm('${c.id}', '${r.site_users?.username || ''}')" class="text-[9px] font-black text-zinc-500 hover:text-blue-600 uppercase mt-1">উত্তর দিন</button>
+                                        </div>
+                                    </div>
+                                `).join('') : ''}
+                            </div>
                         </div>
-                        <p class="text-zinc-700 dark:text-zinc-300 leading-relaxed">${c.content}</p>
                     </div>
                 `).join('');
             } catch (err) {
@@ -219,23 +282,136 @@
         }
 
         document.getElementById('submit-comment').onclick = async () => {
-            const author = document.getElementById('comment-author').value;
+            if (!user) {
+                showToast('মন্তব্য করতে অনুগ্রহ করে আগে প্রবেশ করুন।', 'info');
+                return;
+            }
+
             const content = document.getElementById('comment-body').value;
 
-            if (!author || !content) {
-                showToast('দয়া করে নাম এবং মন্তব্য উভয়ই লিখুন।', 'error');
+            if (!content) {
+                showToast('দয়া করে মন্তব্য লিখুন।', 'error');
                 return;
             }
 
             const { error } = await supabase
                 .from('comments')
-                .insert([{ article_slug: slug, author, content }]);
+                .insert([{ article_slug: slug, author: user.full_name, user_id: user.id, content }]);
 
             if (error) {
                 showToast('মন্তব্য পোস্ট করা যায়নি।', 'error');
             } else {
                 showToast('আপনার মন্তব্য যুক্ত করা হয়েছে!', 'success');
                 document.getElementById('comment-body').value = '';
+                fetchComments();
+            }
+        };
+
+        // Reply System Logic
+        window.toggleReplyForm = (commentId, mentionUsername) => {
+            const form = document.getElementById(`reply-form-${commentId}`);
+            const input = document.getElementById(`reply-input-${commentId}`);
+            const dropdown = document.getElementById(`mention-dropdown-${commentId}`);
+            
+            if (mentionUsername) {
+                const mentionTag = `@${mentionUsername} `;
+                if (!input.value.includes(mentionTag)) {
+                    input.value = mentionTag + input.value;
+                }
+                form.classList.remove('hidden');
+            } else {
+                form.classList.toggle('hidden');
+            }
+
+            if (dropdown) dropdown.classList.add('hidden');
+            if (!form.classList.contains('hidden')) {
+                input.focus();
+            }
+        };
+
+        // Mention Dropdown Logic
+        let mentionDebounce;
+        window.handleMentionSearch = async (e, id) => {
+            const input = e.target;
+            const value = input.value;
+            const cursor = input.selectionStart;
+            const textBefore = value.substring(0, cursor);
+            const match = textBefore.match(/@(\w*)$/);
+            const dropdown = document.getElementById(id === 'main' ? 'mention-dropdown-main' : `mention-dropdown-${id}`);
+
+            if (match) {
+                const query = match[1];
+                clearTimeout(mentionDebounce);
+                mentionDebounce = setTimeout(async () => {
+                    const { data, error } = await supabase
+                        .from('site_users')
+                        .select('username, full_name, profile_pic_url')
+                        .ilike('username', `${query}%`)
+                        .limit(5);
+
+                    if (data && data.length > 0) {
+                        dropdown.innerHTML = data.map(u => `
+                            <div onclick="applyMention('${u.username}', '${id}')" class="flex items-center gap-3 p-3 hover:bg-zinc-100 dark:hover:bg-zinc-700 cursor-pointer border-b border-zinc-100 dark:border-zinc-700 last:border-0 transition-colors">
+                                ${generateAvatarHtml(u.full_name, u.profile_pic_url)}
+                                <div class="flex-1 min-w-0">
+                                    <p class="text-sm font-black text-zinc-900 dark:text-white truncate">${u.full_name}</p>
+                                    <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">@${u.username}</p>
+                                </div>
+                            </div>
+                        `).join('');
+                        dropdown.classList.remove('hidden');
+                    } else {
+                        dropdown.classList.add('hidden');
+                    }
+                }, 300);
+            } else {
+                dropdown.classList.add('hidden');
+            }
+        };
+
+        window.applyMention = (username, id) => {
+            const input = document.getElementById(id === 'main' ? 'comment-body' : `reply-input-${id}`);
+            const dropdown = document.getElementById(id === 'main' ? 'mention-dropdown-main' : `mention-dropdown-${id}`);
+            const value = input.value;
+            const cursor = input.selectionStart;
+            const textBefore = value.substring(0, cursor);
+            const textAfter = value.substring(cursor);
+            const lastAt = textBefore.lastIndexOf('@');
+
+            input.value = textBefore.substring(0, lastAt) + '@' + username + ' ' + textAfter;
+            dropdown.classList.add('hidden');
+            input.focus();
+        };
+
+        window.submitCommentReply = async (commentId) => {
+            if (!user) {
+                showToast('উত্তর দিতে অনুগ্রহ করে আগে প্রবেশ করুন।', 'info');
+                return;
+            }
+
+            const input = document.getElementById(`reply-input-${commentId}`);
+            const content = input.value.trim();
+            const btn = document.getElementById(`reply-btn-${commentId}`);
+
+            if (!content) {
+                showToast('দয়া করে উত্তর লিখুন।', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'পাঠানো হচ্ছে...';
+
+            const { error } = await supabase
+                .from('comment_replies')
+                .insert([{ comment_id: commentId, author: user.full_name, user_id: user.id, content }]);
+
+            btn.disabled = false;
+            btn.textContent = 'উত্তর পাঠান';
+
+            if (error) {
+                showToast('উত্তর পাঠানো যায়নি।', 'error');
+            } else {
+                showToast('আপনার উত্তর যুক্ত করা হয়েছে!', 'success');
                 fetchComments();
             }
         };
@@ -254,12 +430,17 @@
                     .single();
 
                 if (error || !article) throw error;
-                renderArticle(article);
 
-                // ভিউ ১ বাড়িয়ে দিন
-                await supabase.rpc('increment_article_views', { row_id: article.id });
-                // UI-তে তাৎক্ষণিক ১টি ভিউ বাড়িয়ে দেখান
-                article.views = (article.views || 0) + 1;
+                // ভিউ ১ বাড়িয়ে দিন (সেশন ভিত্তিক চেক)
+                const articleKey = `viewed_article_${article.id}`;
+                if (!sessionStorage.getItem(articleKey)) {
+                    const { error: rpcError } = await supabase.rpc('increment_article_views', { row_id: article.id });
+                    if (!rpcError) {
+                        sessionStorage.setItem(articleKey, 'true');
+                        article.views = (article.views || 0) + 1;
+                    }
+                }
+                renderArticle(article);
             } catch (err) {
                 console.error('Supabase error:', err);
                 showError();

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="bn" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ড্যাশবোর্ড - উইকিপিডিয়া.বাংলা</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = { darkMode: 'class', theme: { extend: { fontFamily: { sans: ['"Hind Siliguri"', 'sans-serif'] } } } }
+    </script>
+</head>
+<body class="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-300 font-sans antialiased min-h-screen">
+    <nav class="sticky top-0 z-50 h-16 border-b bg-white/70 dark:bg-zinc-950/70 backdrop-blur-3xl flex items-center px-6 justify-between">
+        <div onclick="window.location.href='index.html'" class="flex items-center gap-3 cursor-pointer">
+            <div class="w-9 h-9 bg-zinc-900 dark:bg-white rounded-xl flex items-center justify-center">
+                <span class="text-lg text-white dark:text-black font-bold">উ</span>
+            </div>
+            <span class="font-bold text-lg text-zinc-900 dark:text-white">ড্যাশবোর্ড</span>
+        </div>
+        <button onclick="window.location.href='profile.html'" class="px-4 py-2 text-sm font-bold bg-zinc-100 dark:bg-zinc-800 rounded-xl hover:bg-zinc-200 transition-all">প্রোফাইল</button>
+    </nav>
+
+    <main class="max-w-6xl mx-auto p-6 lg:p-12 space-y-10">
+        <header class="space-y-2">
+            <h1 class="text-4xl font-black text-zinc-900 dark:text-white">অ্যানালিটিক্স ড্যাশবোর্ড</h1>
+            <p class="text-zinc-500">আপনার কার্যক্রম এবং জনপ্রিয়তার বিস্তারিত তথ্য।</p>
+        </header>
+
+        <!-- Stats Grid -->
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+            <div class="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                <p class="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">মোট ভিউ</p>
+                <h2 id="db-total-views" class="text-3xl font-black text-blue-600">০</h2>
+            </div>
+            <div class="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                <p class="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">মোট পছন্দ</p>
+                <h2 id="db-total-likes" class="text-3xl font-black text-rose-500">০</h2>
+            </div>
+            <div class="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                <p class="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">অনুসারী</p>
+                <h2 id="db-followers" class="text-3xl font-black text-zinc-900 dark:text-white">০</h2>
+            </div>
+            <div class="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                <p class="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">অনুসরণ</p>
+                <h2 id="db-following" class="text-3xl font-black text-zinc-900 dark:text-white">০</h2>
+            </div>
+            <div class="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                <p class="text-zinc-400 text-[10px] font-black uppercase tracking-widest mb-2">কানেকশন</p>
+                <h2 id="db-connections" class="text-3xl font-black text-emerald-500">০</h2>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div class="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                <h3 class="text-xl font-black mb-6">শীর্ষ নিবন্ধসমূহ</h3>
+                <div id="top-articles-list" class="space-y-4">
+                    <p class="text-zinc-500 text-sm">লোড হচ্ছে...</p>
+                </div>
+            </div>
+            <div class="bg-white dark:bg-zinc-900 p-6 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
+                <h3 class="text-xl font-black mb-6">শীর্ষ স্টোরিসমূহ</h3>
+                <div id="top-stories-list" class="space-y-4">
+                    <p class="text-zinc-500 text-sm">লোড হচ্ছে...</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script type="module">
+        import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+        const supabase = createClient('https://ejawztjfekggwtlyymym.supabase.co', 'sb_publishable_qzyHuTPdiitg0FZE6XCA5g_orpm2TsH');
+        
+        const user = JSON.parse(localStorage.getItem('wiki_user'));
+        if (!user) window.location.href = 'index.html';
+
+        async function loadDashboard() {
+            // Load Articles
+            const { data: articles } = await supabase.from('articles').select('id, views, title, slug').eq('user_id', user.id).order('views', { ascending: false });
+            const { data: stories } = await supabase.from('stories').select('id, views, title').eq('user_id', user.id).order('views', { ascending: false });
+            
+            // Calculate Views
+            const artViews = articles?.reduce((acc, curr) => acc + (curr.views || 0), 0) || 0;
+            const storyViews = stories?.reduce((acc, curr) => acc + (curr.views || 0), 0) || 0;
+            document.getElementById('db-total-views').textContent = artViews + storyViews;
+
+            // Load Reactions (Likes) for user's content only
+            const artIds = articles?.map(a => a.id) || [];
+            const storyIds = stories?.map(s => s.id) || [];
+            let totalLikesCount = 0;
+
+            if (artIds.length > 0) {
+                const { count: artLikes } = await supabase.from('discussion_reactions').select('*', { count: 'exact', head: true }).in('target_id', artIds);
+                totalLikesCount += (artLikes || 0);
+            }
+            if (storyIds.length > 0) {
+                const { count: storyLikes } = await supabase.from('story_reactions').select('*', { count: 'exact', head: true }).in('story_id', storyIds);
+                totalLikesCount += (storyLikes || 0);
+            }
+            document.getElementById('db-total-likes').textContent = totalLikesCount;
+
+            // Social Stats (Real Data)
+            const { count: followers } = await supabase.from('followers').select('*', { count: 'exact', head: true }).eq('following_id', user.id);
+            const { count: following } = await supabase.from('followers').select('*', { count: 'exact', head: true }).eq('follower_id', user.id);
+            document.getElementById('db-followers').textContent = followers || 0;
+            document.getElementById('db-following').textContent = following || 0; 
+            document.getElementById('db-connections').textContent = Math.min(followers || 0, following || 0); // Mocking mutual connections
+
+            // Render Lists
+            renderList('top-articles-list', articles?.slice(0, 5), 'views');
+            renderList('top-stories-list', stories?.slice(0, 5), 'views');
+
+            // Wallet & Earnings Logic (Assuming a 'wallets' and 'transactions' table exists)
+            const { data: wallet } = await supabase.from('wallets').select('*').eq('user_id', user.id).maybeSingle();
+            if (wallet) {
+                document.getElementById('db-wallet-balance').textContent = `৳${wallet.balance || 0}`;
+                document.getElementById('total-earnings').textContent = `৳${wallet.total_earned || 0}`;
+                document.getElementById('monthly-earnings').textContent = `৳${wallet.monthly_earned || 0}`;
+                document.getElementById('withdrawable-amount').textContent = `৳${wallet.balance || 0}`;
+            }
+
+            const { data: txs } = await supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(5);
+            if (txs && txs.length > 0) {
+                const history = document.getElementById('earnings-history');
+                history.innerHTML = txs.map(tx => `
+                    <div class="flex justify-between items-center p-4 bg-zinc-50 dark:bg-zinc-800/30 rounded-2xl border border-zinc-100 dark:border-zinc-800">
+                        <div>
+                            <p class="font-bold text-sm text-zinc-900 dark:text-white">${tx.description}</p>
+                            <p class="text-[10px] text-zinc-500">${new Date(tx.created_at).toLocaleDateString('bn-BD')}</p>
+                        </div>
+                        <span class="font-black text-sm ${tx.type === 'credit' ? 'text-emerald-500' : 'text-rose-500'}">
+                            ${tx.type === 'credit' ? '+' : '-'} ৳${tx.amount}
+                        </span>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function renderList(id, items, metric) {
+            const container = document.getElementById(id);
+            if (!items || items.length === 0) {
+                container.innerHTML = '<p class="text-zinc-500 text-sm">কোনো তথ্য পাওয়া যায়নি।</p>';
+                return;
+            }
+            container.innerHTML = items.map(item => `
+                <div class="flex justify-between items-center p-3 bg-zinc-50 dark:bg-zinc-800/50 rounded-2xl">
+                    <p class="font-bold text-sm truncate pr-4">${item.title}</p>
+                    <span class="text-xs font-black text-blue-500 whitespace-nowrap">${item[metric] || 0} ভিউ</span>
+                </div>
+            `).join('');
+        }
+
+        loadDashboard();
+    </script>
+</body>
+</html>

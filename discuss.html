@@ -45,21 +45,31 @@
                 <div id="active-reactions" class="mt-4"></div>
             </div>
 
-            <div class="space-y-4">
+            <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-4 sm:p-6 space-y-4 shadow-sm">
+                <div class="flex gap-3">
+                    <div id="currentUserAvatarForReply" class="flex-shrink-0"></div>
+                    <div class="flex-1 space-y-3">
+                        <textarea id="reply-content" placeholder="আপনার উত্তর লিখুন..." rows="1" class="w-full bg-zinc-100 dark:bg-zinc-800/50 border-none rounded-2xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500/40 transition-all resize-none text-sm" oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"></textarea>
+                        
+                        <div class="flex flex-col sm:flex-row justify-between items-center gap-3">
+                            <div class="flex items-center gap-2">
+                                <label for="reply-images" class="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 cursor-pointer text-zinc-500 transition-colors" title="ছবি যুক্ত করুন">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                                </label>
+                                <input type="file" id="reply-images" multiple accept="image/*" class="hidden">
+                                <span id="image-count-badge" class="text-[10px] font-bold text-blue-500 hidden"></span>
+                            </div>
+                            <button id="submit-reply" class="w-full sm:w-auto px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-md active:scale-95 transition-all text-sm">উত্তর দিন</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-4 pt-4">
                 <h3 class="font-bold text-xl px-2">উত্তরসমূহ</h3>
                 <div id="replies-list" class="space-y-4">
                     <div class="h-24 skeleton w-full"></div>
                 </div>
-            </div>
-
-            <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 space-y-4 shadow-sm">
-                <h4 class="font-bold text-zinc-900 dark:text-white">আপনার উত্তর দিন</h4>
-                <div class="space-y-2">
-                    <label class="text-[10px] font-bold uppercase text-zinc-400 px-1">ছবি যুক্ত করুন</label>
-                    <input type="file" id="reply-images" multiple accept="image/*" class="w-full text-xs text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
-                </div>
-                <textarea id="reply-content" placeholder="আপনার উত্তর লিখুন..." rows="3" class="w-full bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 rounded-xl px-5 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500/40"></textarea>
-                <button id="submit-reply" class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow-lg active:scale-95 transition-all">উত্তর জমা দিন</button>
             </div>
         </div>
     </main>
@@ -76,11 +86,17 @@
         let discussionAuthorId = null;
         let discussionTitle = "";
         const user = JSON.parse(localStorage.getItem('wiki_user'));
+
+        // Init Theme
+        const savedTheme = user?.theme_preference || localStorage.getItem('theme') || 'dark';
+        if (savedTheme === 'dark') document.documentElement.classList.add('dark');
+        else document.documentElement.classList.remove('dark');
         
         function generateAvatarHtml(authorName) {
-            const initial = authorName ? authorName.charAt(0).toUpperCase() : 'U';
+            const name = authorName || 'Unknown';
+            const initial = name.charAt(0).toUpperCase();
             const colors = ['bg-red-500', 'bg-blue-500', 'bg-emerald-500', 'bg-amber-500', 'bg-indigo-500', 'bg-rose-500'];
-            const hash = authorName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+            const hash = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
             const color = colors[hash % colors.length];
             return `<div class="w-10 h-10 rounded-full ${color} flex items-center justify-center text-white text-lg font-bold shadow-inner flex-shrink-0">${initial}</div>`;
         }
@@ -240,11 +256,11 @@
                 const items = await Promise.all(data.map(async r => {
                     const stats = await getReactionStats(r.id);
                     return `
-                    <div class="flex gap-2">
+                    <div class="flex gap-3">
                         ${generateAvatarHtml(r.author)}
                         <div class="flex-1">
-                            <div class="bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-800 px-4 py-2 rounded-[1.2rem] inline-block max-w-full">
-                                <p class="font-bold text-xs text-zinc-900 dark:text-white mb-0.5 leading-none">${r.author}</p>
+                            <div class="bg-zinc-100 dark:bg-zinc-800/70 px-4 py-2.5 rounded-2xl inline-block max-w-full shadow-sm">
+                                <p class="font-black text-xs text-zinc-900 dark:text-white mb-0.5 leading-none hover:underline cursor-pointer">${r.author}</p>
                                 <p class="text-sm text-zinc-700 dark:text-zinc-300 leading-relaxed">${r.content}</p>
                             </div>
                             <div class="mt-2 ml-2">
@@ -270,10 +286,10 @@
                                     </div>`;
                                 })() : ''}
                             </div>
-                            <div class="flex items-center gap-4 text-[10px] text-zinc-500 font-bold ml-3 mt-1 uppercase tracking-wider">
-                                <button id="reaction-btn-${r.id}" onclick="toggleReaction('${r.id}')" class="hover:underline transition-colors ${stats.isLiked ? 'text-blue-600' : ''}">Like (<span id="reaction-count-${r.id}">${stats.count}</span>)</button>
-                                <span>${new Date(r.created_at).toLocaleDateString('bn-BD')}</span>
-                                <button onclick="shareDiscussion('${r.id}')" class="hover:underline transition-colors">Share</button>
+                            <div class="flex items-center gap-4 text-[11px] text-zinc-500 font-bold ml-3 mt-1 tracking-tight">
+                                <button id="reaction-btn-${r.id}" onclick="toggleReaction('${r.id}')" class="hover:underline transition-colors ${stats.isLiked ? 'text-blue-600' : ''}">পছন্দ (<span id="reaction-count-${r.id}">${stats.count}</span>)</button>
+                                <button onclick="document.getElementById('reply-content').focus()" class="hover:underline transition-colors">উত্তর</button>
+                                <span class="font-normal opacity-70">${new Date(r.created_at).toLocaleDateString('bn-BD')}</span>
                             </div>
                         </div>
                     </div>`;
@@ -281,6 +297,33 @@
                 list.innerHTML = items.join('') || '<p class="text-zinc-500 text-center py-4">কোনো উত্তর নেই।</p>';
             } catch (err) { console.error(err); }
         }
+
+        function renderCurrentUserAvatar() {
+            const container = document.getElementById('currentUserAvatarForReply');
+            if (!container) return;
+            const user = JSON.parse(localStorage.getItem('wiki_user'));
+            if (user) {
+                if (user.profile_pic_url) {
+                    container.innerHTML = `<img src="${user.profile_pic_url}" class="w-10 h-10 rounded-full object-cover ring-1 ring-zinc-200 dark:ring-zinc-800">`;
+                } else {
+                    container.innerHTML = generateAvatarHtml(user.full_name);
+                }
+            } else {
+                container.innerHTML = `<div class="w-10 h-10 rounded-full bg-zinc-200 dark:bg-zinc-800 flex items-center justify-center text-zinc-400">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                </div>`;
+            }
+        }
+
+        document.getElementById('reply-images').onchange = (e) => {
+            const badge = document.getElementById('image-count-badge');
+            if (e.target.files.length > 0) {
+                badge.textContent = e.target.files.length + 'টি ছবি সিলেক্ট করা হয়েছে';
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        };
 
         async function uploadMultipleImages(files) {
             const urls = [];
@@ -360,12 +403,17 @@
             discussionAuthorId = topic.user_id;
             discussionTitle = topic.title;
 
-            // Increment views via RPC
-            await supabase.rpc('increment_discussion_views', { row_id: discussionId });
-            
-            // UI-তে তাৎক্ষণিক আপডেট দেখানোর জন্য
-            topic.views = (topic.views || 0) + 1;
+            // Increment views via RPC (session based check)
+            const discussionKey = `viewed_discussion_${discussionId}`;
+            if (!sessionStorage.getItem(discussionKey)) {
+                const { error: rpcError } = await supabase.rpc('increment_discussion_views', { row_id: discussionId });
+                if (!rpcError) {
+                    sessionStorage.setItem(discussionKey, 'true');
+                    topic.views = (topic.views || 0) + 1;
+                }
+            }
 
+            renderCurrentUserAvatar();
             renderTopicHeader(topic);
             fetchReplies();
         }
